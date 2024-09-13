@@ -29,12 +29,8 @@
         "name": {
           "type": "object",
           "properties": {
-            "first": {
-              "title": "First Name",
-              "type": "string"
-            },
-            "last": {
-              "title": "Last Name",
+            "username": {
+              "title": "Username",
               "type": "string"
             }
           }

@@ -1,7 +1,8 @@
-package main
+package auth
 
 import (
 	"context"
+	"embed"
 	"fmt"
 	ory "github.com/ory/client-go"
 	"html/template"
@@ -9,6 +10,9 @@ import (
 	"net/http"
 	"os"
 )
+
+//go:embed public/*
+var public embed.FS
 
 type App struct {
 	ory     *ory.APIClient
@@ -98,7 +102,7 @@ type DashboardData struct {
 
 func (app *App) dashboardHandler() http.HandlerFunc {
 	return func(writer http.ResponseWriter, request *http.Request) {
-		tmpl, err := template.New("index.html").ParseFiles("index.html")
+		tmpl, err := template.New("index.html").ParseFS(public, "public/index.html")
 		if err != nil {
 			http.Error(writer, err.Error(), http.StatusInternalServerError)
 			return
@@ -153,7 +157,7 @@ func (app *App) loginHandler() http.HandlerFunc {
 		//json, err := json.Marshal(flow)
 		//log.Printf("flow: %s\n", string(json))
 
-		tmpl, err := template.New("login.html").ParseFiles("login.html")
+		tmpl, err := template.New("login.html").ParseFS(public, "public/login.html")
 		if err != nil {
 			http.Error(writer, err.Error(), http.StatusInternalServerError)
 			return
@@ -186,7 +190,7 @@ func (app *App) registerHandler() http.HandlerFunc {
 			return
 		}
 
-		tmpl, err := template.New("register.html").ParseFiles("register.html")
+		tmpl, err := template.New("register.html").ParseFS(public, "public/register.html")
 		if err != nil {
 			http.Error(writer, err.Error(), http.StatusInternalServerError)
 			return
@@ -216,7 +220,7 @@ func (app *App) verificationHandler() http.HandlerFunc {
 			return
 		}
 
-		tmpl, err := template.New("verification.html").ParseFiles("verification.html")
+		tmpl, err := template.New("verification.html").ParseFS(public, "public/verification.html")
 		if err != nil {
 			http.Error(writer, err.Error(), http.StatusInternalServerError)
 			return
