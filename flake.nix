@@ -8,14 +8,14 @@
 
   outputs = inputs@{ flake-parts, ... }:
     flake-parts.lib.mkFlake { inherit inputs; } {
-      imports = [];
+      imports = [ ];
       systems = [ "x86_64-linux" "aarch64-linux" "aarch64-darwin" "x86_64-darwin" ];
       perSystem = { config, self', inputs', pkgs, system, ... }: {
         formatter = pkgs.nixpkgs-fmt;
         devShells.default = pkgs.mkShell {
-            packages = with pkgs; [ ory ];
+          packages = with pkgs; [ ory nodejs_22 ];
         };
       };
-      flake = {};
+      flake = { };
     };
 }

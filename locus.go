@@ -8,6 +8,7 @@ import (
 	"github.com/goccy/go-json"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/log"
+	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/template/html/v2"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
@@ -38,16 +39,29 @@ func main() {
 		JSONDecoder: json.Unmarshal,
 	})
 
-	oryAuthApp := auth.App{
-		Router:  app.Group("/auth"),
-		Ory:     oryClient,
-		OryBase: oryBase,
+	if len(os.Args) >= 2 && os.Args[1] == "dev" {
+		log.Info("Running in dev mode")
+		app.Use(cors.New(cors.Config{
+			AllowOrigins:     "http://localhost:5173",
+			AllowHeaders:     "Origin, Content-Type, Accept",
+			AllowMethods:     "GET, POST, PUT, DELETE",
+			AllowCredentials: true,
+		}))
+		devAuth(app)
+	} else {
+		log.Info("Running in production mode")
+		oryAuthApp := auth.App{
+			Router:  app.Group("/auth"),
+			Ory:     oryClient,
+			OryBase: oryBase,
+		}
+		oryAuthApp.Prepare(app)
 	}
-	oryAuthApp.Prepare(app)
 
 	coldMfaApp := coldmfa.App{
 		Router:      app.Group("/coldmfa"),
 		DatabaseUrl: "postgres://coldmfa:coldmfa@localhost:5432/coldmfa?sslmode=disable",
+		Public:      public,
 	}
 	coldMfaApp.Prepare()
 
@@ -63,4 +77,21 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+}
+
+func devAuth(app *fiber.App) {
+	app.Use(func(c *fiber.Ctx) error {
+		var out map[string]interface{}
+		if err := json.Unmarshal([]byte("{\"email\": \"tester@local.net\", \"name\": {\"username\": \"tester\"}}"), &out); err != nil {
+			return err
+		}
+		c.Locals("session", &ory.Session{
+			Identity: &ory.Identity{
+				Id:     "tester",
+				Traits: out,
+			},
+		})
+
+		return c.Next()
+	})
 }
