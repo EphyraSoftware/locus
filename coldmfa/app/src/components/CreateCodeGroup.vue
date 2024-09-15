@@ -1,15 +1,15 @@
 <script setup lang="ts">
-import type { AxiosError, AxiosInstance, AxiosResponse } from 'axios'
-import { ref } from 'vue'
-import type { ApiError, CodeGroup } from '@/types'
-
-const props = defineProps<{
-  client: AxiosInstance
-}>()
+import type {AxiosError, AxiosInstance, AxiosResponse} from 'axios'
+import {inject, ref} from 'vue'
+import type {ApiError, CodeGroup} from '@/types'
+import {useGroupsStore} from "@/stores/groups";
 
 const emit = defineEmits<{
-  created: [group: CodeGroup]
+  created: [group: CodeGroup],
 }>()
+
+const client = inject<AxiosInstance>("client") as AxiosInstance
+const groupsStore = useGroupsStore()
 
 const groupName = ref('')
 const errMsg = ref('')
@@ -18,35 +18,41 @@ const createGroup = (event: Event) => {
   event.preventDefault()
   event.stopPropagation()
 
-  props.client
-    .post('api/groups', {
-      name: groupName.value
-    })
-    .then((response: AxiosResponse<CodeGroup | ApiError>) => {
-      if (response.status === 201) {
-        // TODO update state store
-        groupName.value = ''
-        errMsg.value = ''
-        emit('created', response.data as CodeGroup)
-      } else {
-        // TODO handle auth error which doesn't return an error message
-        errMsg.value = (response.data as ApiError).error
-      }
-    })
-    .catch((err: AxiosError) => {
-      console.error(err)
-    })
+  client
+      .post('api/groups', {
+        name: groupName.value
+      })
+      .then((response: AxiosResponse<CodeGroup | ApiError>) => {
+        if (response.status === 201) {
+          groupsStore.insertGroup(response.data as CodeGroup)
+          groupName.value = ''
+          errMsg.value = ''
+          emit('created', response.data as CodeGroup)
+        } else {
+          // TODO handle auth error which doesn't return an error message
+          errMsg.value = (response.data as ApiError).error
+        }
+      })
+      .catch((err: AxiosError) => {
+        if (err?.response && typeof err?.response.data === "object" && err?.response.data && "error" in err?.response.data) {
+          errMsg.value = (err.response.data as ApiError).error
+        } else {
+          errMsg.value = 'Unknown error'
+          console.error(err)
+        }
+      })
 }
 </script>
 
 <template>
   <p class="text-xl bold">Create a new group</p>
-  <form class="flex flex-col" @submit="createGroup">
-    <p v-if="errMsg">{{ errMsg }}</p>
-    <label for="group">Group</label>
-    <input type="text" id="group" class="rounded" v-model="groupName" />
-    <div class="flex flex-row justify-end my-5 mx-1">
-      <button class="bg-teal-400 rounded p-2 mt-2" type="submit">Group</button>
+  <form class="flex flex-col py-2" @submit="createGroup">
+    <input type="text" placeholder="Group name" class="input input-bordered input-accent w-full max-w-s"
+           v-model="groupName"/>
+    <p v-if="errMsg" class="text-red-500 py-2">Error creating your group: {{ errMsg }}</p>
+
+    <div class="flex flex-row justify-end my-2 mx-1">
+      <button class="btn btn-primary rounded p-2 mt-2" type="submit">Create</button>
     </div>
   </form>
 </template>

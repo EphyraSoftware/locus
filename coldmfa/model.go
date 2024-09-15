@@ -5,7 +5,7 @@ type ApiError struct {
 }
 
 type CodeGroup struct {
-	GroupId string        `json:"group_id"`
+	GroupId string        `json:"groupId"`
 	Name    string        `json:"name"`
 	Codes   []CodeSummary `json:"codes"`
 }
@@ -15,7 +15,7 @@ type CreateCode struct {
 }
 
 type CodeSummary struct {
-	CodeId        string  `json:"code_id"`
+	CodeId        string  `json:"codeId"`
 	Name          string  `json:"name"`
-	PreferredName *string `json:"preferred_name"`
+	PreferredName *string `json:"preferredName"`
 }

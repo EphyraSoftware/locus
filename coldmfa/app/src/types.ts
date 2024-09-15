@@ -3,13 +3,13 @@ export interface ApiError {
 }
 
 export interface CodeGroup {
-  group_id: string
+  groupId: string
   name: string
   codes?: CodeSummary[]
 }
 
 export interface CodeSummary {
-  code_id: string
+  codeId: string
   name: string
-  preferred_name?: string
+  preferredName?: string
 }

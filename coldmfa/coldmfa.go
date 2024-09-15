@@ -141,6 +141,10 @@ func (a *App) Prepare() {
 			return c.Status(http.StatusBadRequest).JSON(ApiError{Error: "invalid request"})
 		}
 
+		if len(codeGroup.Name) < 3 {
+			return c.Status(http.StatusBadRequest).JSON(ApiError{Error: "name too short"})
+		}
+
 		groupId, err := gonanoid.New()
 		if err != nil {
 			log.Errorf("failed to generate group id: %s", err.Error())

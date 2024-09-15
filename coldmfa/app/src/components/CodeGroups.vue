@@ -1,24 +1,23 @@
 <script setup lang="ts">
 import type { AxiosError, AxiosInstance, AxiosResponse } from 'axios'
 import type { ApiError, CodeGroup } from '@/types'
-import { ref } from 'vue'
+import {inject, ref} from 'vue'
 import CreateCode from '@/components/CreateCode.vue'
 import CodeList from '@/components/CodeList.vue'
+import {useGroupsStore} from "@/stores/groups";
 
-const props = defineProps<{
-  client: AxiosInstance
-}>()
-
-const groups = ref<CodeGroup[]>([])
+const client = inject<AxiosInstance>('client') as AxiosInstance
+const groupsStore = useGroupsStore()
 const selectedGroupId = ref('')
+const showNewCode = ref(false)
 
-props.client
+client
   .get('api/groups')
   .then((response: AxiosResponse<CodeGroup[] | ApiError>) => {
     if (response.status === 200) {
-      groups.value = response.data as CodeGroup[]
-      if (groups.value.length > 0) {
-        selectedGroupId.value = groups.value[0].group_id
+      groupsStore.setGroups(response.data as CodeGroup[])
+      if (groupsStore.groups.length > 0) {
+        selectedGroupId.value = groupsStore.groups[0].groupId
       }
     } else {
       console.error(response.data)
@@ -30,16 +29,25 @@ props.client
 </script>
 
 <template>
-  <select v-model="selectedGroupId">
-    <option value="">Select a group</option>
-    <option v-for="group in groups" :key="group.group_id" :value="group.group_id">
-      {{ group.name }}
-    </option>
-  </select>
+  <div class="mb-5">
+    <select v-model="selectedGroupId" :disabled="groupsStore.groups.length === 0" class="select select-bordered w-full max-w-xs">
+      <option disabled value="">Select a group</option>
+      <option v-for="group in groupsStore.groups" :key="group.groupId" :value="group.groupId">
+        {{ group.name }}
+      </option>
+    </select>
+  </div>
 
-  <CreateCode :client="props.client" :groupId="selectedGroupId" />
+  <div class="flex w-full justify-end">
+    <button @click="showNewCode = !showNewCode" :disabled="selectedGroupId === ''" class="btn btn-secondary rounded p-2 mt-2">New code</button>
+  </div>
+  <div class="flex justify-center" v-if="showNewCode">
+    <div class="flex flex-col w-1/3">
+      <CreateCode :group-id="selectedGroupId" />
+    </div>
+  </div>
 
-  <CodeList :client="props.client" :group-id="selectedGroupId" />
+  <CodeList :group-id="selectedGroupId" />
 </template>
 
 <style scoped></style>

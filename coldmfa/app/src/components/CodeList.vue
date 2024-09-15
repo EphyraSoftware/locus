@@ -1,19 +1,20 @@
 <script setup lang="ts">
 import type { AxiosInstance } from 'axios'
 import type { CodeGroup, CodeSummary } from '@/types'
-import { ref, watch } from 'vue'
+import {inject, ref, watch} from 'vue'
 
 const props = defineProps<{
-  client: AxiosInstance
   groupId: string
 }>()
+
+const client = inject<AxiosInstance>('client') as AxiosInstance
 
 const codes = ref<CodeSummary[]>([])
 
 watch(
   () => props.groupId,
   (groupId) => {
-    fetchGroup(props.client, groupId).then((codeSummaryList) => {
+    fetchGroup(client, groupId).then((codeSummaryList) => {
       if (codeSummaryList) {
         codes.value = codeSummaryList
       }
@@ -42,7 +43,7 @@ const fetchGroup = async (client: AxiosInstance, groupId: string) => {
 
 <template>
   <div class="flex flex-col">
-    <p v-for="code in codes" :key="code.code_id">{{ code.preferred_name ?? code.name }}</p>
+    <p v-for="code in codes" :key="code.codeId">{{ code.preferredName ?? code.name }}</p>
   </div>
 </template>
 

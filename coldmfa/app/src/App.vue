@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import axios from 'axios'
-import { ref } from 'vue'
+import {provide, ref} from 'vue'
 import CreateCodeGroup from '@/components/CreateCodeGroup.vue'
 import CodeGroups from '@/components/CodeGroups.vue'
+import type {CodeGroup} from "@/types";
 
 interface UserName {
   username: string
@@ -18,6 +19,7 @@ interface User {
 }
 
 const user = ref('')
+const showNewGroup = ref(false)
 
 const client = axios.create({
   baseURL: import.meta.env.DEV ? 'http://127.0.0.1:3000/coldmfa' : import.meta.env.BASE_URL,
@@ -28,10 +30,16 @@ const client = axios.create({
   withCredentials: true
 })
 
+provide("client", client)
+
 client.get('api/user').then((response) => {
   const u = response.data as User
   user.value = u.user.name.username
 })
+
+const groupCreated = (_group: CodeGroup) => {
+  showNewGroup.value = false
+}
 </script>
 
 <template>
@@ -44,11 +52,16 @@ client.get('api/user').then((response) => {
   <main class="container mx-auto">
     <p>Welcome, {{ user }}</p>
 
-    <div class="w-1/3">
-      <CreateCodeGroup :client="client" />
+    <div class="flex w-full justify-end">
+      <button @click="showNewGroup = !showNewGroup" class="btn btn-secondary rounded p-2 mt-2">New group</button>
+    </div>
+    <div class="flex justify-center" v-if="showNewGroup">
+      <div class="w-1/3">
+        <CreateCodeGroup @created="groupCreated" />
+      </div>
     </div>
 
-    <CodeGroups :client="client" />
+    <CodeGroups />
   </main>
 </template>
 
