@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import axios from 'axios'
-import {ref} from 'vue'
-import CreateCodeGroup from "@/components/CreateCodeGroup.vue";
-import CodeGroups from "@/components/CodeGroups.vue";
+import { ref } from 'vue'
+import CreateCodeGroup from '@/components/CreateCodeGroup.vue'
+import CodeGroups from '@/components/CodeGroups.vue'
 
 interface UserName {
   username: string
@@ -20,19 +20,18 @@ interface User {
 const user = ref('')
 
 const client = axios.create({
-  baseURL: import.meta.env.DEV ? "http://127.0.0.1:3000/coldmfa" : import.meta.env.BASE_URL,
+  baseURL: import.meta.env.DEV ? 'http://127.0.0.1:3000/coldmfa' : import.meta.env.BASE_URL,
   headers: {
     'Content-Type': 'application/json',
-    'Accept': 'application/json',
+    Accept: 'application/json'
   },
-  withCredentials: true,
+  withCredentials: true
 })
 
 client.get('api/user').then((response) => {
-  const u = response.data as User;
+  const u = response.data as User
   user.value = u.user.name.username
 })
-
 </script>
 
 <template>
@@ -53,5 +52,4 @@ client.get('api/user').then((response) => {
   </main>
 </template>
 
-<style scoped>
-</style>
+<style scoped></style>

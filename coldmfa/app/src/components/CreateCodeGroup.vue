@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import type {AxiosError, AxiosInstance, AxiosResponse} from "axios";
-import {ref} from "vue";
-import type {ApiError, CodeGroup} from "@/types";
+import type { AxiosError, AxiosInstance, AxiosResponse } from 'axios'
+import { ref } from 'vue'
+import type { ApiError, CodeGroup } from '@/types'
 
 const props = defineProps<{
   client: AxiosInstance
@@ -18,23 +18,25 @@ const createGroup = (event: Event) => {
   event.preventDefault()
   event.stopPropagation()
 
-  props.client.post('api/groups', {
-    name: groupName.value
-  }).then((response: AxiosResponse<CodeGroup | ApiError>) => {
-    if (response.status === 201) {
-      // TODO update state store
-      groupName.value = ''
-      errMsg.value = ''
-      emit('created', response.data as CodeGroup)
-    } else {
-      // TODO handle auth error which doesn't return an error message
-      errMsg.value = (response.data as ApiError).error
-    }
-  }).catch((err: AxiosError) => {
-    console.error(err)
-  })
+  props.client
+    .post('api/groups', {
+      name: groupName.value
+    })
+    .then((response: AxiosResponse<CodeGroup | ApiError>) => {
+      if (response.status === 201) {
+        // TODO update state store
+        groupName.value = ''
+        errMsg.value = ''
+        emit('created', response.data as CodeGroup)
+      } else {
+        // TODO handle auth error which doesn't return an error message
+        errMsg.value = (response.data as ApiError).error
+      }
+    })
+    .catch((err: AxiosError) => {
+      console.error(err)
+    })
 }
-
 </script>
 
 <template>

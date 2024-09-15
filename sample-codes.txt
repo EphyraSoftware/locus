@@ -1,0 +1,3 @@
+otpauth://totp/EphyraSoftware:test-a?algorithm=SHA1&digits=6&issuer=EphyraSoftware&period=30&secret=NL6ZHWZXRNCNNIHQKDXK2Q4GGA3PKQD3
+otpauth://totp/EphyraSoftware:test-b?algorithm=SHA1&digits=6&issuer=EphyraSoftware&period=30&secret=A23DJ4WDRR2XFPDKBUQ5ZLZN6KVIIIC4
+otpauth://totp/EphyraSoftware:test-c?algorithm=SHA1&digits=6&issuer=EphyraSoftware&period=30&secret=YP3KF5CZOKOCK35VUUCC4SJL6ACGULR3
