@@ -1,13 +1,15 @@
 <script setup lang="ts">
-import {inject, ref} from 'vue'
-import type {AxiosError, AxiosInstance, AxiosResponse} from 'axios'
-import type {ApiError, CodeSummary} from '@/types'
+import { inject, ref } from 'vue'
+import type { AxiosError, AxiosInstance, AxiosResponse } from 'axios'
+import type { ApiError, CodeSummary } from '@/types'
+import { useGroupsStore } from '@/stores/groups'
 
 const props = defineProps<{
   groupId: string
 }>()
 
 const client = inject<AxiosInstance>('client') as AxiosInstance
+const groupsStore = useGroupsStore()
 
 const original = ref('')
 const errMsg = ref('')
@@ -17,21 +19,27 @@ const storeCode = async (event: Event) => {
   event.stopPropagation()
 
   try {
+    const groupId = props.groupId
     const response: AxiosResponse<CodeSummary | ApiError> = await client.post(
-        `api/groups/${props.groupId}/codes`,
-        {
-          original: original.value
-        }
+      `api/groups/${groupId}/codes`,
+      {
+        original: original.value
+      }
     )
 
     if (response.status === 201) {
-      console.log('Code stored successfully', response.data as CodeSummary)
+      groupsStore.addCodeToGroup(groupId, response.data as CodeSummary)
     } else {
       errMsg.value = (response.data as ApiError).error
     }
   } catch (error) {
     const err = error as AxiosError
-    if (err?.response && typeof err?.response.data === "object" && err?.response.data && "error" in err?.response.data) {
+    if (
+      err?.response &&
+      err?.response?.data &&
+      typeof err.response.data === 'object' &&
+      'error' in err.response.data
+    ) {
       errMsg.value = (err.response.data as ApiError).error
     } else {
       errMsg.value = 'Unknown error'
@@ -44,9 +52,13 @@ const storeCode = async (event: Event) => {
 <template>
   <p class="text-xl bold">Create a new code</p>
   <form class="flex flex-col py-2" @submit="storeCode">
-    <input type="text" placeholder="URL for the One Time Password" name="original"
-           class="input input-bordered input-accent w-full max-w-s"
-           v-model="original"/>
+    <input
+      type="text"
+      placeholder="URL for the One Time Password"
+      name="original"
+      class="input input-bordered input-accent w-full max-w-s"
+      v-model="original"
+    />
     <p v-if="errMsg" class="text-red-500 py-2">Error creating your group: {{ errMsg }}</p>
 
     <div class="flex flex-row justify-end my-2 mx-1">

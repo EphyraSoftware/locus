@@ -1,24 +1,28 @@
 <script setup lang="ts">
 import type { AxiosInstance } from 'axios'
-import type { CodeGroup, CodeSummary } from '@/types'
-import {inject, ref, watch} from 'vue'
+import type { CodeGroup } from '@/types'
+import { computed, inject, watch } from 'vue'
+import { useGroupsStore } from '@/stores/groups'
 
 const props = defineProps<{
   groupId: string
 }>()
 
 const client = inject<AxiosInstance>('client') as AxiosInstance
+const groupsStore = useGroupsStore()
 
-const codes = ref<CodeSummary[]>([])
+const codes = computed(() => {
+  return groupsStore.groupById(props.groupId)?.codes ?? []
+})
 
 watch(
   () => props.groupId,
   (groupId) => {
-    fetchGroup(client, groupId).then((codeSummaryList) => {
-      if (codeSummaryList) {
-        codes.value = codeSummaryList
-      }
-    })
+    // Only load codes if we don't have details for this group yet.
+    // Otherwise, maintain state on the UI.
+    if (!groupsStore.groupHasCodes(groupId)) {
+      fetchGroup(client, groupId)
+    }
   }
 )
 
@@ -28,7 +32,8 @@ const fetchGroup = async (client: AxiosInstance, groupId: string) => {
       const response = await client.get(`api/groups/${groupId}`)
 
       if (response.status === 200 && (response.data as CodeGroup).codes) {
-        return (response.data as CodeGroup).codes
+        let codeGroup = response.data as CodeGroup
+        groupsStore.insertGroup(codeGroup)
       } else {
         console.error(response)
       }
@@ -36,8 +41,6 @@ const fetchGroup = async (client: AxiosInstance, groupId: string) => {
       console.error(e)
     }
   }
-
-  return []
 }
 </script>
 

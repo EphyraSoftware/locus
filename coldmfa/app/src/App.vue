@@ -1,9 +1,8 @@
 <script setup lang="ts">
 import axios from 'axios'
-import {provide, ref} from 'vue'
+import { provide, ref } from 'vue'
 import CreateCodeGroup from '@/components/CreateCodeGroup.vue'
 import CodeGroups from '@/components/CodeGroups.vue'
-import type {CodeGroup} from "@/types";
 
 interface UserName {
   username: string
@@ -30,14 +29,14 @@ const client = axios.create({
   withCredentials: true
 })
 
-provide("client", client)
+provide('client', client)
 
 client.get('api/user').then((response) => {
   const u = response.data as User
   user.value = u.user.name.username
 })
 
-const groupCreated = (_group: CodeGroup) => {
+const groupCreated = () => {
   showNewGroup.value = false
 }
 </script>
@@ -53,7 +52,9 @@ const groupCreated = (_group: CodeGroup) => {
     <p>Welcome, {{ user }}</p>
 
     <div class="flex w-full justify-end">
-      <button @click="showNewGroup = !showNewGroup" class="btn btn-secondary rounded p-2 mt-2">New group</button>
+      <button @click="showNewGroup = !showNewGroup" class="btn btn-secondary rounded p-2 mt-2">
+        New group
+      </button>
     </div>
     <div class="flex justify-center" v-if="showNewGroup">
       <div class="w-1/3">
