@@ -13,9 +13,11 @@ import (
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/source/iofs"
 	gonanoid "github.com/matoous/go-nanoid/v2"
+	"github.com/pquerna/otp"
 	"github.com/pquerna/otp/totp"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -230,6 +232,67 @@ func (a *App) Prepare() {
 
 		return c.Status(http.StatusCreated).JSON(createdCode)
 	})
+
+	api.Get("/groups/:groupId/codes/:codeId", func(c *fiber.Ctx) error {
+		sessionId := auth.SessionId(c)
+		if sessionId == "" {
+			return c.SendStatus(http.StatusUnauthorized)
+		}
+
+		groupId := c.Params("groupId")
+		if groupId == "" {
+			return c.Status(http.StatusBadRequest).JSON(ApiError{Error: "missing groupId"})
+		}
+
+		codeId := c.Params("codeId")
+		if codeId == "" {
+			return c.Status(http.StatusBadRequest).JSON(ApiError{Error: "missing codeId"})
+		}
+
+		row := db.QueryRow("select original from code where code_group_id = (select id from code_group where owner_id = $1 and group_id = $2) and code_id = $3", sessionId, groupId, codeId)
+		if row == nil {
+			return c.Status(http.StatusNotFound).JSON(ApiError{Error: "code not found"})
+		}
+
+		var original string
+		err := row.Scan(&original)
+		if err != nil {
+			log.Errorf("failed to scan code: %s", err.Error())
+			return c.Status(http.StatusInternalServerError).JSON(ApiError{Error: "database error"})
+		}
+
+		otpConfig, err := extractOtpAuthUrl(original)
+		if err != nil {
+			log.Errorf("failed to extract otp config: %s", err.Error())
+			return c.Status(http.StatusInternalServerError).JSON(ApiError{Error: "internal error"})
+		}
+
+		opts, err := otpConfig.toOpts()
+		if err != nil {
+			log.Errorf("failed to convert otp config: %s", err.Error())
+			return c.Status(http.StatusInternalServerError).JSON(ApiError{Error: "internal error"})
+		}
+		now := time.Now()
+		passcodeNow, err := totp.GenerateCodeCustom(otpConfig.Secret, now, *opts)
+		if err != nil {
+			log.Errorf("failed to generate code: %s", err.Error())
+			return c.Status(http.StatusInternalServerError).JSON(ApiError{Error: "internal error"})
+		}
+
+		later := now.Add(time.Duration(opts.Period) * time.Second)
+		passcodeLater, err := totp.GenerateCodeCustom(otpConfig.Secret, later, *opts)
+		if err != nil {
+			log.Errorf("failed to generate code: %s", err.Error())
+			return c.Status(http.StatusInternalServerError).JSON(ApiError{Error: "internal error"})
+		}
+
+		return c.Status(200).JSON(PasscodeResponse{
+			Passcode:     passcodeNow,
+			NextPasscode: passcodeLater,
+			ServerTime:   now.Unix(),
+			Period:       opts.Period,
+		})
+	})
 }
 
 func readCodeGroup(context context.Context, db *sql.DB, ownerId string, groupId string) (*CodeGroup, error) {
@@ -252,4 +315,136 @@ func readCodeSummary(db *sql.DB, ownerId string, groupId, codeId string) (*CodeS
 	var code CodeSummary
 	err := row.Scan(&code.CodeId, &code.Name, &code.PreferredName)
 	return &code, err
+}
+
+type OtpConfig struct {
+	Type      string
+	Label     string
+	Secret    string
+	Issuer    *string
+	Algorithm *string
+	Digits    *int
+	Counter   *int
+	Period    *uint
+}
+
+func extractOtpAuthUrl(raw string) (*OtpConfig, error) {
+	otpUrl, err := url.Parse(raw)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse otp url: %s", err.Error())
+	}
+
+	if otpUrl.Scheme != "otpauth" {
+		return nil, fmt.Errorf("invalid otp url scheme")
+	}
+
+	typ := otpUrl.Host
+	if typ != "totp" && typ != "hotp" {
+		return nil, fmt.Errorf("unsupported otp type")
+	}
+
+	path := otpUrl.Path
+	if len(path) > 0 && path[0] == '/' {
+		path = path[1:]
+	}
+	parts := strings.Split(otpUrl.Path, "/")
+
+	if len(parts) < 1 {
+		return nil, fmt.Errorf("invalid otp url path")
+	}
+
+	label := parts[1]
+
+	secret := otpUrl.Query().Get("secret")
+	if secret == "" {
+		return nil, fmt.Errorf("missing secret in otp url")
+	}
+
+	out := OtpConfig{
+		Type:   typ,
+		Label:  label,
+		Secret: secret,
+	}
+
+	issuer := otpUrl.Query().Get("issuer")
+	if issuer != "" {
+		out.Issuer = &issuer
+	}
+
+	algorithm := otpUrl.Query().Get("algorithm")
+	if algorithm != "" {
+		out.Algorithm = &algorithm
+	}
+
+	digits := otpUrl.Query().Get("digits")
+	if digits != "" {
+		num, err := strconv.Atoi(digits)
+		if err != nil {
+			return nil, fmt.Errorf("invalid digits")
+		}
+		out.Digits = &num
+	}
+
+	counter := otpUrl.Query().Get("counter")
+	if counter != "" {
+		num, err := strconv.Atoi(counter)
+		if err != nil {
+			return nil, fmt.Errorf("invalid counter")
+		}
+		out.Counter = &num
+	} else if typ == "hotp" {
+		return nil, fmt.Errorf("missing counter in hotp url")
+	}
+
+	period := otpUrl.Query().Get("period")
+	if typ == "totp" && period != "" {
+		num, err := strconv.Atoi(period)
+		if err != nil || num < 0 {
+			return nil, fmt.Errorf("invalid period")
+		}
+		unsigned_num := uint(num)
+		out.Period = &unsigned_num
+	}
+
+	return &out, nil
+}
+
+func (cfg *OtpConfig) toOpts() (*totp.ValidateOpts, error) {
+	opts := totp.ValidateOpts{}
+
+	if cfg.Period != nil {
+		opts.Period = *cfg.Period
+	} else {
+		// Documented default, but might not match what is expected by the totp library if
+		// that code is updated and this isn't...
+		opts.Period = 30
+	}
+
+	if cfg.Digits != nil {
+		switch *cfg.Digits {
+		case 6:
+			opts.Digits = otp.DigitsSix
+		case 8:
+			opts.Digits = otp.DigitsEight
+		default:
+			return nil, fmt.Errorf("invalid digits")
+		}
+	}
+
+	if cfg.Algorithm != nil {
+		switch *cfg.Algorithm {
+		case "SHA1":
+			opts.Algorithm = otp.AlgorithmSHA1
+		case "SHA256":
+			opts.Algorithm = otp.AlgorithmSHA256
+		case "SHA512":
+			opts.Algorithm = otp.AlgorithmSHA512
+		case "MD5":
+			opts.Algorithm = otp.AlgorithmMD5
+		default:
+			return nil, fmt.Errorf("invalid algorithm")
+		}
+	}
+
+	return &opts, nil
 }

@@ -13,3 +13,10 @@ export interface CodeSummary {
   name: string
   preferredName?: string
 }
+
+export interface PasscodeResponse {
+  passcode: string
+  nextPasscode: string
+  serverTime: number
+  period: number
+}

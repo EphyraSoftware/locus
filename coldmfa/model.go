@@ -19,3 +19,10 @@ type CodeSummary struct {
 	Name          string  `json:"name"`
 	PreferredName *string `json:"preferredName"`
 }
+
+type PasscodeResponse struct {
+	Passcode     string `json:"passcode"`
+	NextPasscode string `json:"nextPasscode"`
+	ServerTime   int64  `json:"serverTime"`
+	Period       uint   `json:"period"`
+}

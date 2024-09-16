@@ -63,7 +63,9 @@ client
     </div>
   </div>
 
-  <CodeList :group-id="selectedGroupId" />
+  <div class="my-3">
+    <CodeList :group-id="selectedGroupId" />
+  </div>
 </template>
 
 <style scoped></style>

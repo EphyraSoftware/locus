@@ -3,6 +3,7 @@ import type { AxiosInstance } from 'axios'
 import type { CodeGroup } from '@/types'
 import { computed, inject, watch } from 'vue'
 import { useGroupsStore } from '@/stores/groups'
+import CodeSummaryLine from '@/components/CodeSummaryLine.vue'
 
 const props = defineProps<{
   groupId: string
@@ -46,7 +47,11 @@ const fetchGroup = async (client: AxiosInstance, groupId: string) => {
 
 <template>
   <div class="flex flex-col">
-    <p v-for="code in codes" :key="code.codeId">{{ code.preferredName ?? code.name }}</p>
+    <div v-for="code in codes" :key="code.codeId" class="my-2">
+      <CodeSummaryLine :code="code" :group-id="props.groupId">{{
+        code.preferredName ?? code.name
+      }}</CodeSummaryLine>
+    </div>
   </div>
 </template>
 
