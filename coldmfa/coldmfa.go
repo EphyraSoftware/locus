@@ -15,6 +15,8 @@ import (
 	gonanoid "github.com/matoous/go-nanoid/v2"
 	"github.com/pquerna/otp"
 	"github.com/pquerna/otp/totp"
+	"image/jpeg"
+	"io"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -112,7 +114,7 @@ func (a *App) Prepare() {
 			return c.Status(http.StatusNotFound).JSON(ApiError{Error: "group not found"})
 		}
 
-		rows, err := db.QueryContext(c.Context(), "select code_id, name, preferred_name from code where code_group_id = (select id from code_group where owner_id = $1 and group_id = $2)", sessionId, groupId)
+		rows, err := db.QueryContext(c.Context(), "select code_id, name, preferred_name, created_at from code where code_group_id = (select id from code_group where owner_id = $1 and group_id = $2)", sessionId, groupId)
 		if err != nil {
 			log.Errorf("failed to query codes: %s", err.Error())
 			return c.Status(http.StatusInternalServerError).JSON(ApiError{Error: "database error"})
@@ -121,7 +123,7 @@ func (a *App) Prepare() {
 		codeGroup.Codes = make([]CodeSummary, 0)
 		for rows.Next() {
 			var code CodeSummary
-			err = rows.Scan(&code.CodeId, &code.Name, &code.PreferredName)
+			err = rows.Scan(&code.CodeId, &code.Name, &code.PreferredName, &code.CreatedAt)
 			if err != nil {
 				log.Errorf("failed to scan code: %s", err.Error())
 				return c.Status(http.StatusInternalServerError).JSON(ApiError{Error: "database error"})
@@ -292,6 +294,64 @@ func (a *App) Prepare() {
 			ServerTime:   now.Unix(),
 			Period:       opts.Period,
 		})
+	})
+
+	api.Get("/groups/:groupId/codes/:codeId/qr", func(c *fiber.Ctx) error {
+		sessionId := auth.SessionId(c)
+		if sessionId == "" {
+			return c.SendStatus(http.StatusUnauthorized)
+		}
+
+		groupId := c.Params("groupId")
+		if groupId == "" {
+			return c.Status(http.StatusBadRequest).JSON(ApiError{Error: "missing groupId"})
+		}
+
+		codeId := c.Params("codeId")
+		if codeId == "" {
+			return c.Status(http.StatusBadRequest).JSON(ApiError{Error: "missing codeId"})
+		}
+
+		row := db.QueryRow("select original from code where code_group_id = (select id from code_group where owner_id = $1 and group_id = $2) and code_id = $3", sessionId, groupId, codeId)
+		if row == nil {
+			return c.Status(http.StatusNotFound).JSON(ApiError{Error: "code not found"})
+		}
+
+		var original string
+		err := row.Scan(&original)
+		if err != nil {
+			log.Errorf("failed to scan code: %s", err.Error())
+			return c.Status(http.StatusInternalServerError).JSON(ApiError{Error: "database error"})
+		}
+
+		key, err := otp.NewKeyFromURL(original)
+		if err != nil {
+			log.Errorf("failed to parse key: %s", err.Error())
+			return c.Status(http.StatusInternalServerError).JSON(ApiError{Error: "internal error"})
+		}
+
+		image, err := key.Image(250, 250)
+		if err != nil {
+			log.Errorf("failed to generate qr: %s", err.Error())
+			return c.Status(http.StatusInternalServerError).JSON(ApiError{Error: "internal error"})
+		}
+
+		reader, writer := io.Pipe()
+		go func() {
+			defer func(writer *io.PipeWriter) {
+				err := writer.Close()
+				if err != nil {
+					log.Errorf("failed to close pipe: %s", err.Error())
+				}
+			}(writer)
+			err = jpeg.Encode(writer, image, nil)
+			if err != nil {
+				log.Errorf("failed to encode qr: %s", err.Error())
+			}
+		}()
+
+		c.GetRespHeaders()["Content-Type"] = []string{"image/jpeg"}
+		return c.Status(200).SendStream(reader)
 	})
 }
 

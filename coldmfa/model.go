@@ -18,6 +18,7 @@ type CodeSummary struct {
 	CodeId        string  `json:"codeId"`
 	Name          string  `json:"name"`
 	PreferredName *string `json:"preferredName"`
+	CreatedAt     int64   `json:"createdAt"`
 }
 
 type PasscodeResponse struct {

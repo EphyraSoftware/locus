@@ -9,6 +9,10 @@ const props = defineProps<{
   code: CodeSummary
 }>()
 
+defineEmits<{
+  showExport: [codeId: string]
+}>()
+
 const client = inject<AxiosInstance>('client') as AxiosInstance
 const fetchedCode = ref<PasscodeResponse | undefined>()
 
@@ -46,7 +50,9 @@ const clearExpiredCode = (serverTime: number) => {
     </div>
     <div class="flex w-1/3 justify-end">
       <div class="join">
-        <button class="btn btn-secondary join-item">Details</button>
+        <button class="btn btn-secondary join-item" @click="$emit('showExport', props.code.codeId)">
+          Export
+        </button>
         <button class="btn btn-primary join-item" @click="getCode">Get a code</button>
       </div>
     </div>

@@ -47,7 +47,7 @@ watch(
       timerInterval.value = undefined
     }
 
-    const interval = setInterval(() => {
+    const interval = window.setInterval(() => {
       let currentTimeMillis = new Date().valueOf()
 
       const currentTime = Math.round(currentTimeMillis / 1000)
@@ -76,62 +76,15 @@ watch(
   { immediate: true }
 )
 
-/*
-const timerConfig = computed<TimerConfig>(() => {
-  const windowProgress = props.passcodeResponse.serverTime % props.passcodeResponse.period
-  const windowStart = props.passcodeResponse.serverTime - windowProgress
-  const windowEnd = windowStart + props.passcodeResponse.period
-  const nextWindowEnd = windowEnd + props.passcodeResponse.period
-
-  let timerConfig = {
-    windowStart,
-    windowEnd,
-    nextWindowEnd,
-  } as TimerConfig;
-
-  clientTime.value = Math.round(new Date().valueOf() / 1000)
-  showCode.value = props.passcodeResponse.passcode
-  expired.value = false
-
-  if (timerInterval.value) {
-    clearInterval(timerInterval.value)
-    timerInterval.value = undefined
-  }
-
-  console.log('timerConfig', timerConfig)
-
-  const interval = setInterval(() => {
-    console.log('ticker')
-
-    const currentTime = Math.round(new Date().valueOf() / 1000)
-    clientTime.value = currentTime
-    if (currentTime <= timerConfig.windowEnd) {
-      // Nothing to do
-    } else if (currentTime <= timerConfig.nextWindowEnd) {
-      if (showCode.value !== props.passcodeResponse.nextPasscode) {
-        showCode.value = props.passcodeResponse.nextPasscode
-      }
-    } else {
-      expired.value = true
-      clearInterval(interval)
-    }
-  }, 1000)
-
-  setTimeout(() => {
-    clearInterval(interval)
-  }, (timerConfig.nextWindowEnd - clientTime.value) * 1000)
-
-  timerInterval.value = interval
-
-  return timerConfig
-})
-*/
-
 const clientSkew = computed(() => {
   return Math.abs(props.passcodeResponse.serverTime - Math.round(new Date().valueOf() / 1000))
 })
 
 const percentRemaining = () => {
+  if (!timerConfig.value) {
+    return 0
+  }
+
   if (clientTime.value <= timerConfig.value.windowEnd) {
     return Math.floor(
       ((timerConfig.value.windowEnd - clientTime.value) / props.passcodeResponse.period) * 100
@@ -146,6 +99,10 @@ const percentRemaining = () => {
 }
 
 const secsRemaining = () => {
+  if (!timerConfig.value) {
+    return 0
+  }
+
   if (clientTime.value <= timerConfig.value.windowEnd) {
     return timerConfig.value.windowEnd - clientTime.value
   } else if (clientTime.value <= timerConfig.value.nextWindowEnd) {
