@@ -61,8 +61,8 @@ const fetchGroup = async (client: AxiosInstance, groupId: string) => {
   <div class="flex flex-col">
     <div v-for="code in codes" :key="code.codeId" class="my-2">
       <CodeSummaryLine
-        :code="code"
         :group-id="props.groupId"
+        :code-id="code.codeId"
         @show-export="
           (codeId) => {
             showExportFor = codes.find((c) => c.codeId === codeId)

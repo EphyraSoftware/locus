@@ -33,6 +33,16 @@ export const useGroupsStore = defineStore('groups', () => {
     }
   }
 
+  const replaceCodeInGroup = (groupId: string, code: CodeSummary) => {
+    const group = groups.value.find((g) => g.groupId === groupId)
+    if (group && group.codes) {
+      const codeIndex = group.codes.findIndex((c) => c.codeId === code.codeId)
+      if (codeIndex !== -1) {
+        group.codes[codeIndex] = code
+      }
+    }
+  }
+
   const groupHasCodes = (groupId: string) => {
     const group = groups.value.find((g) => g.groupId === groupId)
     return group && group.codes && group.codes.length > 0
@@ -42,7 +52,21 @@ export const useGroupsStore = defineStore('groups', () => {
     return groups.value.find((g) => g.groupId === groupId)
   }
 
-  return { groups, insertGroup, setGroups, addCodeToGroup, groupHasCodes, groupById }
+  const codeById = (groupId: string, codeId: string) => {
+    const group = groups.value.find((g) => g.groupId === groupId)
+    return group && group.codes && group.codes.find((c) => c.codeId === codeId)
+  }
+
+  return {
+    groups,
+    insertGroup,
+    setGroups,
+    addCodeToGroup,
+    replaceCodeInGroup,
+    groupHasCodes,
+    groupById,
+    codeById
+  }
 })
 
 if (import.meta.hot) {

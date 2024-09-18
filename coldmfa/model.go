@@ -1,5 +1,7 @@
 package coldmfa
 
+import "time"
+
 type ApiError struct {
 	Error string `json:"error"`
 }
@@ -15,10 +17,12 @@ type CreateCode struct {
 }
 
 type CodeSummary struct {
-	CodeId        string  `json:"codeId"`
-	Name          string  `json:"name"`
-	PreferredName *string `json:"preferredName"`
-	CreatedAt     int64   `json:"createdAt"`
+	CodeId        string     `json:"codeId"`
+	Name          string     `json:"name"`
+	PreferredName *string    `json:"preferredName"`
+	CreatedAt     time.Time  `json:"createdAt"`
+	Deleted       bool       `json:"deleted"`
+	DeletedAt     *time.Time `json:"deletedAt"`
 }
 
 type PasscodeResponse struct {

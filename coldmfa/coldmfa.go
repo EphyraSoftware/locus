@@ -114,7 +114,7 @@ func (a *App) Prepare() {
 			return c.Status(http.StatusNotFound).JSON(ApiError{Error: "group not found"})
 		}
 
-		rows, err := db.QueryContext(c.Context(), "select code_id, name, preferred_name, created_at from code where code_group_id = (select id from code_group where owner_id = $1 and group_id = $2)", sessionId, groupId)
+		rows, err := db.QueryContext(c.Context(), "select code_id, name, preferred_name, created_at, deleted, deleted_at from code where code_group_id = (select id from code_group where owner_id = $1 and group_id = $2)", sessionId, groupId)
 		if err != nil {
 			log.Errorf("failed to query codes: %s", err.Error())
 			return c.Status(http.StatusInternalServerError).JSON(ApiError{Error: "database error"})
@@ -123,7 +123,7 @@ func (a *App) Prepare() {
 		codeGroup.Codes = make([]CodeSummary, 0)
 		for rows.Next() {
 			var code CodeSummary
-			err = rows.Scan(&code.CodeId, &code.Name, &code.PreferredName, &code.CreatedAt)
+			err = rows.Scan(&code.CodeId, &code.Name, &code.PreferredName, &code.CreatedAt, &code.Deleted, &code.DeletedAt)
 			if err != nil {
 				log.Errorf("failed to scan code: %s", err.Error())
 				return c.Status(http.StatusInternalServerError).JSON(ApiError{Error: "database error"})
@@ -296,6 +296,88 @@ func (a *App) Prepare() {
 		})
 	})
 
+	api.Put("/groups/:groupId/codes/:codeId", func(c *fiber.Ctx) error {
+		sessionId := auth.SessionId(c)
+		if sessionId == "" {
+			return c.SendStatus(http.StatusUnauthorized)
+		}
+
+		groupId := c.Params("groupId")
+		if groupId == "" {
+			return c.Status(http.StatusBadRequest).JSON(ApiError{Error: "missing groupId"})
+		}
+
+		codeId := c.Params("codeId")
+		if codeId == "" {
+			return c.Status(http.StatusBadRequest).JSON(ApiError{Error: "missing codeId"})
+		}
+
+		codeSummary := new(CodeSummary)
+		if err := c.BodyParser(codeSummary); err != nil {
+			return c.Status(http.StatusBadRequest).JSON(ApiError{Error: "invalid request"})
+		}
+
+		var result sql.Result
+		if codeSummary.PreferredName != nil && strings.TrimSpace(*codeSummary.PreferredName) == "" {
+			result, err = db.ExecContext(c.Context(), "update code set preferred_name = NULL where deleted = false and code_group_id = (select id from code_group where owner_id = $1 and group_id = $2) and code_id = $3", sessionId, groupId, codeId)
+		} else {
+			setName := strings.TrimSpace(*codeSummary.PreferredName)
+			result, err = db.ExecContext(c.Context(), "update code set preferred_name = $4 where deleted = false and code_group_id = (select id from code_group where owner_id = $1 and group_id = $2) and code_id = $3", sessionId, groupId, codeId, setName)
+		}
+
+		if err != nil {
+			log.Errorf("failed to update code: %s", err.Error())
+			return c.Status(http.StatusInternalServerError).JSON(ApiError{Error: "database error"})
+		}
+
+		rowsAffected, err := result.RowsAffected()
+		if err != nil {
+			log.Errorf("failed to update code: %s", err.Error())
+			return c.Status(http.StatusInternalServerError).JSON(ApiError{Error: "database error"})
+		}
+
+		if rowsAffected == 0 {
+			return c.Status(http.StatusNotFound).JSON(ApiError{Error: "code not found"})
+		}
+
+		return c.SendStatus(http.StatusNoContent)
+	})
+
+	api.Delete("/groups/:groupId/codes/:codeId", func(c *fiber.Ctx) error {
+		sessionId := auth.SessionId(c)
+		if sessionId == "" {
+			return c.SendStatus(http.StatusUnauthorized)
+		}
+
+		groupId := c.Params("groupId")
+		if groupId == "" {
+			return c.Status(http.StatusBadRequest).JSON(ApiError{Error: "missing groupId"})
+		}
+
+		codeId := c.Params("codeId")
+		if codeId == "" {
+			return c.Status(http.StatusBadRequest).JSON(ApiError{Error: "missing codeId"})
+		}
+
+		result, err := db.ExecContext(c.Context(), "update code set deleted = true, deleted_at = now() where deleted = false and code_group_id = (select id from code_group where owner_id = $1 and group_id = $2) and code_id = $3", sessionId, groupId, codeId)
+		if err != nil {
+			log.Errorf("failed to delete code: %s", err.Error())
+			return c.Status(http.StatusInternalServerError).JSON(ApiError{Error: "database error"})
+		}
+
+		rowsAffected, err := result.RowsAffected()
+		if err != nil {
+			log.Errorf("failed to delete code: %s", err.Error())
+			return c.Status(http.StatusInternalServerError).JSON(ApiError{Error: "database error"})
+		}
+
+		if rowsAffected == 0 {
+			return c.Status(http.StatusNotFound).JSON(ApiError{Error: "code not found"})
+		}
+
+		return c.SendStatus(http.StatusOK)
+	})
+
 	api.Get("/groups/:groupId/codes/:codeId/qr", func(c *fiber.Ctx) error {
 		sessionId := auth.SessionId(c)
 		if sessionId == "" {
@@ -367,13 +449,13 @@ func readCodeGroup(context context.Context, db *sql.DB, ownerId string, groupId 
 }
 
 func readCodeSummary(db *sql.DB, ownerId string, groupId, codeId string) (*CodeSummary, error) {
-	row := db.QueryRow("select code_id, name, preferred_name from code where code_group_id = (select id from code_group where owner_id = $1 and group_id = $2) and code_id = $3", ownerId, groupId, codeId)
+	row := db.QueryRow("select code_id, name, preferred_name, created_at, deleted, deleted_at from code where code_group_id = (select id from code_group where owner_id = $1 and group_id = $2) and code_id = $3", ownerId, groupId, codeId)
 	if row == nil {
 		return nil, fmt.Errorf("code not found")
 	}
 
 	var code CodeSummary
-	err := row.Scan(&code.CodeId, &code.Name, &code.PreferredName)
+	err := row.Scan(&code.CodeId, &code.Name, &code.PreferredName, &code.CreatedAt, &code.Deleted, &code.DeletedAt)
 	return &code, err
 }
 

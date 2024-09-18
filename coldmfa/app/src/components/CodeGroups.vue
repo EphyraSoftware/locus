@@ -59,7 +59,7 @@ client
   </div>
   <div class="flex justify-center" v-if="showNewCode">
     <div class="flex flex-col w-1/3">
-      <CreateCode :group-id="selectedGroupId" />
+      <CreateCode :group-id="selectedGroupId" @created="showNewCode = false" />
     </div>
   </div>
 

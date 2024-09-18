@@ -24,6 +24,9 @@ create table code
 
     created_at     timestamp not null default now(),
 
+    deleted        boolean   not null default false,
+    deleted_at     timestamp,
+
     constraint code_group_id_code_id_unique
         unique (code_group_id, code_id), -- Note only unique within the group, so querying by code_id must only be done in the context of a group
     constraint code_group_id_original_unique

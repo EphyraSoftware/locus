@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { AxiosError, AxiosInstance, AxiosResponse } from 'axios'
-import { inject, ref } from 'vue'
+import { inject, onMounted, ref, useTemplateRef } from 'vue'
 import type { ApiError, CodeGroup } from '@/types'
 import { useGroupsStore } from '@/stores/groups'
 
@@ -13,6 +13,12 @@ const groupsStore = useGroupsStore()
 
 const groupName = ref('')
 const errMsg = ref('')
+
+const input = useTemplateRef('groupNameInput')
+
+onMounted(() => {
+  input.value?.focus()
+})
 
 const createGroup = (event: Event) => {
   event.preventDefault()
@@ -56,6 +62,7 @@ const createGroup = (event: Event) => {
       type="text"
       placeholder="Group name"
       class="input input-bordered input-accent w-full max-w-s"
+      ref="groupNameInput"
       v-model="groupName"
     />
     <p v-if="errMsg" class="text-red-500 py-2">Error creating your group: {{ errMsg }}</p>
