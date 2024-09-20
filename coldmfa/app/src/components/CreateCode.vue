@@ -69,6 +69,7 @@ const storeCode = async (event: Event) => {
       placeholder="URL for the One Time Password"
       name="original"
       class="input input-bordered input-accent w-full max-w-s"
+      autocomplete="off"
       ref="codeNameInput"
       v-model="original"
     />

@@ -62,6 +62,7 @@ const createGroup = (event: Event) => {
       type="text"
       placeholder="Group name"
       class="input input-bordered input-accent w-full max-w-s"
+      autocomplete="off"
       ref="groupNameInput"
       v-model="groupName"
     />

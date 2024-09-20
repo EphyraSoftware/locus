@@ -375,7 +375,7 @@ func (a *App) Prepare() {
 			return c.Status(http.StatusNotFound).JSON(ApiError{Error: "code not found"})
 		}
 
-		return c.SendStatus(http.StatusOK)
+		return c.SendStatus(http.StatusNoContent)
 	})
 
 	api.Get("/groups/:groupId/codes/:codeId/qr", func(c *fiber.Ctx) error {

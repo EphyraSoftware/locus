@@ -12,6 +12,8 @@ export interface CodeSummary {
   codeId: string
   name: string
   preferredName?: string
+  deleted: boolean
+  deletedAt?: number
 }
 
 export interface PasscodeResponse {
