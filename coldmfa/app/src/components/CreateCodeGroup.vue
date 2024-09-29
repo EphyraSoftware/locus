@@ -20,38 +20,40 @@ onMounted(() => {
   input.value?.focus()
 })
 
-const createGroup = (event: Event) => {
+const createGroup = async (event: Event) => {
   event.preventDefault()
   event.stopPropagation()
 
-  client
-    .post('api/groups', {
-      name: groupName.value
-    })
-    .then((response: AxiosResponse<CodeGroup | ApiError>) => {
-      if (response.status === 201) {
-        groupsStore.insertGroup(response.data as CodeGroup)
-        groupName.value = ''
-        errMsg.value = ''
-        emit('created', response.data as CodeGroup)
-      } else {
-        // TODO handle auth error which doesn't return an error message
-        errMsg.value = (response.data as ApiError).error
+  try {
+    const response: AxiosResponse<CodeGroup | ApiError> = await client.post(
+      'api/groups',
+      {
+        name: groupName.value
+      },
+      {
+        validateStatus: (status) => status === 201
       }
-    })
-    .catch((err: AxiosError) => {
-      if (
-        err?.response &&
-        err?.response?.data &&
-        typeof err.response.data === 'object' &&
-        'error' in err.response.data
-      ) {
-        errMsg.value = (err.response.data as ApiError).error
-      } else {
-        errMsg.value = 'Unknown error'
-        console.error(err)
-      }
-    })
+    )
+
+    groupsStore.insertGroup(response.data as CodeGroup)
+    groupName.value = ''
+    errMsg.value = ''
+    emit('created', response.data as CodeGroup)
+  } catch (e) {
+    const err = e as AxiosError
+
+    if (
+      err?.response &&
+      err?.response?.data &&
+      typeof err.response.data === 'object' &&
+      'error' in err.response.data
+    ) {
+      errMsg.value = (err.response.data as ApiError).error
+    } else {
+      console.error(err.toJSON())
+      errMsg.value = 'Unknown error'
+    }
+  }
 }
 </script>
 
