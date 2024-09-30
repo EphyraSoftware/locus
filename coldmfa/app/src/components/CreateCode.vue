@@ -34,16 +34,15 @@ const storeCode = async (event: Event) => {
       `api/groups/${groupId}/codes`,
       {
         original: original.value
+      },
+      {
+        validateStatus: (status) => status === 201
       }
     )
 
-    if (response.status === 201) {
-      original.value = ''
-      groupsStore.addCodeToGroup(groupId, response.data as CodeSummary)
-      emit('created', response.data as CodeSummary)
-    } else {
-      errMsg.value = (response.data as ApiError).error
-    }
+    original.value = ''
+    groupsStore.addCodeToGroup(groupId, response.data as CodeSummary)
+    emit('created', response.data as CodeSummary)
   } catch (error) {
     const err = error as AxiosError
     if (
@@ -73,7 +72,7 @@ const storeCode = async (event: Event) => {
       ref="codeNameInput"
       v-model="original"
     />
-    <p v-if="errMsg" class="text-red-500 py-2">Error creating your group: {{ errMsg }}</p>
+    <p v-if="errMsg" class="text-red-500 py-2">Error creating your code: {{ errMsg }}</p>
 
     <div class="flex flex-row justify-end my-2 mx-1">
       <button class="btn btn-primary rounded p-2 mt-2" type="submit">Store code</button>
