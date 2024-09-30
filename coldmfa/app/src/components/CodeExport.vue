@@ -20,13 +20,11 @@ const autoHidden = ref(false)
 const fetchQR = async (): Promise<ArrayBuffer | null> => {
   try {
     const response = await client.get(`api/groups/${props.groupId}/codes/${props.code.codeId}/qr`, {
-      responseType: 'arraybuffer'
+      responseType: 'arraybuffer',
+      validateStatus: (status) => status === 200
     })
-    if (response.status === 200) {
-      return response.data
-    } else {
-      console.error(response)
-    }
+
+    return response.data
   } catch (e) {
     console.error(e)
   }
