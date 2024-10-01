@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { ApiError, CodeSummary, PasscodeResponse } from '@/types'
+import type { ApiError, PasscodeResponse } from '@/types'
 import type { AxiosInstance, AxiosResponse } from 'axios'
 import { computed, inject, ref, useTemplateRef } from 'vue'
 import CodeTicker from '@/components/CodeTicker.vue'
@@ -8,6 +8,7 @@ import { useGroupsStore } from '@/stores/groups'
 const props = defineProps<{
   groupId: string
   codeId: string
+  showNameUpdateButton: boolean
 }>()
 
 defineEmits<{
@@ -27,14 +28,13 @@ const deleteCounter = ref(5)
 const getCode = async () => {
   try {
     const codesResponse: AxiosResponse<PasscodeResponse> = await client.get(
-      `api/groups/${props.groupId}/codes/${props.codeId}`
+      `api/groups/${props.groupId}/codes/${props.codeId}`,
+      {
+        validateStatus: (status) => status === 200
+      }
     )
 
-    if (codesResponse.status === 200) {
-      fetchedCode.value = codesResponse.data
-    } else {
-      console.error(codesResponse.data)
-    }
+    fetchedCode.value = codesResponse.data
   } catch (e) {
     const error = e as ApiError
     console.error(error)
@@ -63,23 +63,22 @@ const renameCode = async () => {
       return
     }
 
-    const response: AxiosResponse<CodeSummary | ApiError> = await client.put(
+    await client.put(
       `api/groups/${props.groupId}/codes/${currentCode.codeId}`,
       {
         preferredName: newPreferredName
+      },
+      {
+        validateStatus: (status) => status === 204
       }
     )
 
-    if (response.status === 204) {
-      if (newPreferredName === '') {
-        currentCode.preferredName = undefined
-      } else {
-        currentCode.preferredName = newPreferredName
-      }
-      groupsStore.replaceCodeInGroup(props.groupId, currentCode)
+    if (newPreferredName === '') {
+      currentCode.preferredName = undefined
     } else {
-      console.error(response)
+      currentCode.preferredName = newPreferredName
     }
+    groupsStore.replaceCodeInGroup(props.groupId, currentCode)
   } catch (e) {
     const error = e as ApiError
     console.error(error)
@@ -99,19 +98,20 @@ const tryDelete = async () => {
     }, 5000)
   }
 
-  if (deleteCounter.value == 0) {
+  deleteCounter.value--
+
+  if (deleteCounter.value <= 0) {
     try {
-      const response = await client.delete(`api/groups/${props.groupId}/codes/${props.codeId}`)
-      if (response.status === 204) {
-        currentCode.deleted = true
-        currentCode.deletedAt = new Date().valueOf()
-        groupsStore.replaceCodeInGroup(props.groupId, currentCode)
-      }
+      await client.delete(`api/groups/${props.groupId}/codes/${props.codeId}`, {
+        validateStatus: (status) => status === 204
+      })
+
+      currentCode.deleted = true
+      currentCode.deletedAt = new Date().valueOf()
+      groupsStore.replaceCodeInGroup(props.groupId, currentCode)
     } catch (e) {
       console.error(e)
     }
-  } else {
-    deleteCounter.value--
   }
 }
 </script>
@@ -124,6 +124,7 @@ const tryDelete = async () => {
         contenteditable="true"
         spellcheck="false"
         ref="codeName"
+        data-test-id="code-name"
         @focusout="renameCode"
       >
         {{ code?.preferredName ?? code?.name }}
@@ -137,11 +138,17 @@ const tryDelete = async () => {
     </div>
     <div class="flex w-1/3 justify-end">
       <div class="join">
-        <button class="btn btn-error join-item" @click="tryDelete" :disabled="code?.deleted">
+        <button
+          class="btn btn-error join-item"
+          @click="tryDelete"
+          data-test-id="delete"
+          :disabled="code?.deleted"
+        >
           {{ deleteCounter == 5 ? 'Delete' : `Confirm? (${deleteCounter})` }}
         </button>
         <button
           class="btn btn-secondary join-item"
+          data-test-id="export"
           @click="
             () => {
               if (code) {
@@ -152,8 +159,21 @@ const tryDelete = async () => {
         >
           Export
         </button>
-        <button class="btn btn-primary join-item" @click="getCode" :disabled="code?.deleted">
+        <button
+          class="btn btn-primary join-item"
+          @click="getCode"
+          data-test-id="get-code"
+          :disabled="code?.deleted"
+        >
           Get a code
+        </button>
+        <button
+          class="btn btn-primary join-item"
+          @click="renameCode"
+          data-test-id="rename"
+          v-if="props.showNameUpdateButton"
+        >
+          Rename
         </button>
       </div>
     </div>

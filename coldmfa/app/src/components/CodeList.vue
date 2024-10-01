@@ -80,6 +80,7 @@ watch(
           <CodeSummaryLine
             :group-id="props.groupId"
             :code-id="code.codeId"
+            :show-name-update-button="true"
             @show-export="
               (codeId) => {
                 showExportFor = codes?.find((c) => c.codeId === codeId)
