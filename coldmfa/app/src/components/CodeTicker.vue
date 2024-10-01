@@ -59,7 +59,7 @@ watch(clientClock, (currentTime) => {
   } else {
     showCode.value = ''
     expired.value = true
-    setTimeout(() => {
+    window.setTimeout(() => {
       emit('expired', props.passcodeResponse.serverTime)
     }, 3000)
   }
