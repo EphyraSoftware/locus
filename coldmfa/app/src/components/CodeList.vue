@@ -5,6 +5,7 @@ import { computed, inject, ref, watch } from 'vue'
 import { useGroupsStore } from '@/stores/groups'
 import CodeSummaryLine from '@/components/CodeSummaryLine.vue'
 import CodeExport from '@/components/CodeExport.vue'
+import TickerProvider from '@/components/TickerProvider.vue'
 
 const props = defineProps<{
   groupId: string
@@ -74,18 +75,20 @@ watch(
       <p>No codes yet</p>
     </div>
     <div v-else>
-      <div v-for="code in codes" :key="code.codeId" class="my-2">
-        <CodeSummaryLine
-          :group-id="props.groupId"
-          :code-id="code.codeId"
-          @show-export="
-            (codeId) => {
-              showExportFor = codes?.find((c) => c.codeId === codeId)
-            }
-          "
-          >{{ code.preferredName ?? code.name }}
-        </CodeSummaryLine>
-      </div>
+      <TickerProvider>
+        <div v-for="code in codes" :key="code.codeId" class="my-2">
+          <CodeSummaryLine
+            :group-id="props.groupId"
+            :code-id="code.codeId"
+            @show-export="
+              (codeId) => {
+                showExportFor = codes?.find((c) => c.codeId === codeId)
+              }
+            "
+            >{{ code.preferredName ?? code.name }}
+          </CodeSummaryLine>
+        </div>
+      </TickerProvider>
     </div>
   </div>
 </template>

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { PasscodeResponse } from '@/types'
-import { computed, ref, watch } from 'vue'
+import { computed, inject, type Ref, ref, watch } from 'vue'
 
 const props = defineProps<{
   passcodeResponse: PasscodeResponse
@@ -10,11 +10,10 @@ const emit = defineEmits<{
   expired: [serverTime: number]
 }>()
 
-const clientTime = ref(0)
+const clientClock = inject('clientClock') as Ref<number>
 const showCode = ref('')
 const expired = ref(false)
 const timerConfig = ref<TimerConfig>()
-const timerInterval = ref<number | undefined>()
 
 interface TimerConfig {
   windowStart: number
@@ -37,44 +36,34 @@ watch(
       nextWindowEnd
     } as TimerConfig
 
-    clientTime.value = Math.round(new Date().valueOf() / 1000)
     showCode.value = props.passcodeResponse.passcode
     expired.value = false
-
-    // If there was a previous timer, clear it
-    if (timerInterval.value) {
-      clearInterval(timerInterval.value)
-      timerInterval.value = undefined
-    }
-
-    const interval = window.setInterval(() => {
-      let currentTimeMillis = new Date().valueOf()
-
-      const currentTime = Math.round(currentTimeMillis / 1000)
-      clientTime.value = currentTime
-      if (currentTime <= newTimerConfig.windowEnd) {
-        // Nothing to do, set above
-      } else if (currentTime <= newTimerConfig.nextWindowEnd) {
-        // Update to the next code, once
-        if (showCode.value !== props.passcodeResponse.nextPasscode) {
-          showCode.value = props.passcodeResponse.nextPasscode
-        }
-      } else {
-        showCode.value = ''
-        expired.value = true
-        clearInterval(interval)
-        setTimeout(() => {
-          emit('expired', props.passcodeResponse.serverTime)
-        }, 3000)
-      }
-    }, 1000)
-
-    timerInterval.value = interval
-
     timerConfig.value = newTimerConfig
   },
   { immediate: true }
 )
+
+watch(clientClock, (currentTime) => {
+  const timer = timerConfig.value
+  if (expired.value || !timer) {
+    return
+  }
+
+  if (currentTime <= timer.windowEnd) {
+    // Nothing to do, set above
+  } else if (currentTime <= timer.nextWindowEnd) {
+    // Update to the next code, once
+    if (showCode.value !== props.passcodeResponse.nextPasscode) {
+      showCode.value = props.passcodeResponse.nextPasscode
+    }
+  } else {
+    showCode.value = ''
+    expired.value = true
+    setTimeout(() => {
+      emit('expired', props.passcodeResponse.serverTime)
+    }, 3000)
+  }
+})
 
 const clientSkew = computed(() => {
   return Math.abs(props.passcodeResponse.serverTime - Math.round(new Date().valueOf() / 1000))
@@ -85,13 +74,13 @@ const percentRemaining = () => {
     return 0
   }
 
-  if (clientTime.value <= timerConfig.value.windowEnd) {
+  if (clientClock.value <= timerConfig.value.windowEnd) {
     return Math.floor(
-      ((timerConfig.value.windowEnd - clientTime.value) / props.passcodeResponse.period) * 100
+      ((timerConfig.value.windowEnd - clientClock.value) / props.passcodeResponse.period) * 100
     )
-  } else if (clientTime.value <= timerConfig.value.nextWindowEnd) {
+  } else if (clientClock.value <= timerConfig.value.nextWindowEnd) {
     return Math.floor(
-      ((timerConfig.value.nextWindowEnd - clientTime.value) / props.passcodeResponse.period) * 100
+      ((timerConfig.value.nextWindowEnd - clientClock.value) / props.passcodeResponse.period) * 100
     )
   } else {
     return 0
@@ -103,10 +92,10 @@ const secsRemaining = () => {
     return 0
   }
 
-  if (clientTime.value <= timerConfig.value.windowEnd) {
-    return timerConfig.value.windowEnd - clientTime.value
-  } else if (clientTime.value <= timerConfig.value.nextWindowEnd) {
-    return timerConfig.value.nextWindowEnd - clientTime.value
+  if (clientClock.value <= timerConfig.value.windowEnd) {
+    return timerConfig.value.windowEnd - clientClock.value
+  } else if (clientClock.value <= timerConfig.value.nextWindowEnd) {
+    return timerConfig.value.nextWindowEnd - clientClock.value
   } else {
     return 0
   }
