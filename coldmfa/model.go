@@ -31,3 +31,22 @@ type PasscodeResponse struct {
 	ServerTime   int64  `json:"serverTime"`
 	Period       uint   `json:"period"`
 }
+
+type BackupRequest struct {
+	Password string `json:"password"`
+}
+
+type CodeBackup struct {
+	BackupVersion string       `json:"backupVersion"`
+	BackupItems   []BackupItem `json:"backup"`
+}
+
+type BackupItem struct {
+	GroupName     string     `json:"groupName"`
+	Original      *string    `json:"original"`
+	CodeName      *string    `json:"codeName"`
+	PreferredName *string    `json:"preferredName"`
+	CreatedAt     *time.Time `json:"createdAt"`
+	Deleted       *bool      `json:"deleted"`
+	DeletedAt     *time.Time `json:"deletedAt"`
+}

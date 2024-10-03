@@ -7,6 +7,7 @@ import (
 	"embed"
 	"fmt"
 	"github.com/EphyraSoftware/locus/auth"
+	"github.com/goccy/go-json"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/log"
 	"github.com/gofiber/fiber/v2/middleware/filesystem"
@@ -434,6 +435,60 @@ func (a *App) Prepare() {
 
 		c.GetRespHeaders()["Content-Type"] = []string{"image/jpeg"}
 		return c.Status(200).SendStream(reader)
+	})
+
+	api.Post("/backups", func(c *fiber.Ctx) error {
+		sessionId := auth.SessionId(c)
+		if sessionId == "" {
+			return c.SendStatus(http.StatusUnauthorized)
+		}
+
+		backupRequest := new(BackupRequest)
+		if err := c.BodyParser(backupRequest); err != nil {
+			return c.Status(http.StatusBadRequest).JSON(ApiError{Error: "invalid request"})
+		}
+
+		rows, err := db.Query("select code_group.name, code.original, code.name as code_name, code.preferred_name, code.created_at, code.deleted, code.deleted_at from code_group left join code on code.code_group_id = code_group.id where owner_id = $1", sessionId)
+		if err != nil {
+			log.Errorf("failed to query backups: %s", err.Error())
+			return c.Status(http.StatusInternalServerError).JSON(ApiError{Error: "database error"})
+		}
+
+		backupItems := make([]BackupItem, 0)
+		for rows.Next() {
+			var item BackupItem
+			err = rows.Scan(&item.GroupName, &item.Original, &item.CodeName, &item.PreferredName, &item.CreatedAt, &item.Deleted, &item.DeletedAt)
+			if err != nil {
+				log.Errorf("failed to scan backup item: %s", err.Error())
+				return c.Status(http.StatusInternalServerError).JSON(ApiError{Error: "database error"})
+			}
+			backupItems = append(backupItems, item)
+		}
+
+		var backupContent []string
+		for _, item := range backupItems {
+			it, err := json.Marshal(item)
+			if err != nil {
+				log.Errorf("failed to marshal backup item: %s", err.Error())
+				return c.Status(http.StatusInternalServerError).JSON(ApiError{Error: "internal error"})
+			}
+			backupContent = append(backupContent, string(it))
+		}
+
+		encrypted, err := EncryptMfaCodeBackupItems(backupContent, backupRequest.Password)
+		if err != nil {
+			log.Errorf("failed to encrypt backup: %s", err.Error())
+			return c.Status(http.StatusInternalServerError).JSON(ApiError{Error: "internal error"})
+		}
+
+		// As a last step before returning the encrypted backup, record the backup time in the database
+		_, err = db.Exec("insert into last_backup (owner_id, backup_at) values ($1, now()) on conflict on constraint owner_id_unique do update set backup_at = now()", sessionId)
+		if err != nil {
+			log.Errorf("failed to record backup: %s", err.Error())
+			return c.Status(http.StatusInternalServerError).JSON(ApiError{Error: "database error"})
+		}
+
+		return c.Status(http.StatusOK).Send(encrypted)
 	})
 }
 

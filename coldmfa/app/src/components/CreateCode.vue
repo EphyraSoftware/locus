@@ -24,10 +24,7 @@ onMounted(() => {
   input.value?.focus()
 })
 
-const storeCode = async (event: Event) => {
-  event.preventDefault()
-  event.stopPropagation()
-
+const storeCode = async () => {
   try {
     const groupId = props.groupId
     const response: AxiosResponse<CodeSummary | ApiError> = await client.post(
@@ -62,7 +59,7 @@ const storeCode = async (event: Event) => {
 
 <template>
   <p class="text-xl bold">Create a new code</p>
-  <form class="flex flex-col py-2" @submit="storeCode">
+  <form class="flex flex-col py-2" @submit.prevent.stop="storeCode">
     <input
       type="text"
       placeholder="URL for the One Time Password"

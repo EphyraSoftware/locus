@@ -20,10 +20,7 @@ onMounted(() => {
   input.value?.focus()
 })
 
-const createGroup = async (event: Event) => {
-  event.preventDefault()
-  event.stopPropagation()
-
+const createGroup = async () => {
   try {
     const response: AxiosResponse<CodeGroup | ApiError> = await client.post(
       'api/groups',
@@ -59,7 +56,7 @@ const createGroup = async (event: Event) => {
 
 <template>
   <p class="text-xl bold">Create a new group</p>
-  <form class="flex flex-col py-2" @submit="createGroup">
+  <form class="flex flex-col py-2" @submit.prevent.stop="createGroup">
     <input
       type="text"
       placeholder="Group name"

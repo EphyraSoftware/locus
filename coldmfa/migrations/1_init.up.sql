@@ -34,3 +34,14 @@ create table code
     constraint code_group_id_preferred_name_unique
         unique (code_group_id, preferred_name)
 );
+
+create table last_backup
+(
+    id         serial primary key,
+    owner_id   text      not null,
+
+    backup_at timestamp not null default now(),
+
+    constraint owner_id_unique
+        unique (owner_id)
+);
