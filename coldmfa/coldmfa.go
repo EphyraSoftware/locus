@@ -5,6 +5,7 @@ import (
 	"context"
 	"database/sql"
 	"embed"
+	"errors"
 	"fmt"
 	"github.com/EphyraSoftware/locus/auth"
 	"github.com/goccy/go-json"
@@ -489,6 +490,90 @@ func (a *App) Prepare() {
 		}
 
 		return c.Status(http.StatusOK).Send(encrypted)
+	})
+
+	api.Put("/backups", func(c *fiber.Ctx) error {
+		sessionId := auth.SessionId(c)
+		if sessionId == "" {
+			return c.SendStatus(http.StatusUnauthorized)
+		}
+
+		restoreBackupRequest := new(RestoreBackupRequest)
+		if err := c.BodyParser(restoreBackupRequest); err != nil {
+			log.Info("failed to parse body")
+			return c.Status(http.StatusBadRequest).JSON(ApiError{Error: "invalid request"})
+		}
+
+		decrypted, err := DecryptMfaCodeBackupItems(restoreBackupRequest.BackupContent, restoreBackupRequest.Password)
+		if err != nil {
+			log.Errorf("failed to decrypt backup: %s", err.Error())
+			return c.Status(http.StatusBadRequest).JSON(ApiError{Error: "invalid backup"})
+		}
+
+		tx, err := db.BeginTx(c.Context(), nil)
+		if err != nil {
+			log.Errorf("failed to start transaction: %s", err.Error())
+			return c.Status(http.StatusInternalServerError).JSON(ApiError{Error: "database error"})
+		}
+
+		defer func(tx *sql.Tx) {
+			err := tx.Rollback()
+			if err != nil && !errors.Is(err, sql.ErrTxDone) {
+				log.Errorf("failed to rollback transaction: %s", err.Error())
+			}
+		}(tx)
+
+		for _, item := range decrypted {
+			var backupItem BackupItem
+			err := json.Unmarshal([]byte(item), &backupItem)
+			if err != nil {
+				log.Errorf("failed to unmarshal backup item: %s", err.Error())
+				return c.Status(http.StatusInternalServerError).JSON(ApiError{Error: "internal error"})
+			}
+
+			groupId, err := gonanoid.New()
+			if err != nil {
+				log.Errorf("failed to generate group id: %s", err.Error())
+				return c.Status(http.StatusInternalServerError).JSON(ApiError{Error: "internal error"})
+			}
+
+			_, err = tx.ExecContext(c.Context(), "insert into code_group (owner_id, group_id, name) values ($1, $2, $3) on conflict on constraint owner_id_name_unique do nothing", sessionId, groupId, backupItem.GroupName)
+			if err != nil {
+				log.Errorf("failed to insert group: %s", err.Error())
+				return c.Status(http.StatusInternalServerError).JSON(ApiError{Error: "database error"})
+			}
+
+			row := tx.QueryRowContext(c.Context(), "select id from code_group where owner_id = $1 and name = $2", sessionId, backupItem.GroupName)
+
+			var groupDatabaseId int
+			err = row.Scan(&groupDatabaseId)
+			if err != nil {
+				log.Errorf("failed to insert or read group: %s", err.Error())
+				return c.Status(http.StatusInternalServerError).JSON(ApiError{Error: "database error"})
+			}
+
+			if backupItem.CodeName != nil {
+				codeId, err := gonanoid.New()
+				if err != nil {
+					log.Errorf("failed to generate code id: %s", err.Error())
+					return c.Status(http.StatusInternalServerError).JSON(ApiError{Error: "internal error"})
+				}
+
+				_, err = tx.ExecContext(c.Context(), "insert into code (code_group_id, code_id, original, name, preferred_name, created_at, deleted, deleted_at) values ($1, $2, $3, $4, $5, $6, $7, $8) on conflict on constraint code_group_id_original_unique do nothing", groupDatabaseId, codeId, backupItem.Original, backupItem.CodeName, backupItem.PreferredName, backupItem.CreatedAt, backupItem.Deleted, backupItem.DeletedAt)
+				if err != nil {
+					log.Errorf("failed to insert code: %s", err.Error())
+					return c.Status(http.StatusInternalServerError).JSON(ApiError{Error: "database error"})
+				}
+			}
+		}
+
+		err = tx.Commit()
+		if err != nil {
+			log.Errorf("failed to commit transaction: %s", err.Error())
+			return c.Status(http.StatusInternalServerError).JSON(ApiError{Error: "database error"})
+		}
+
+		return c.SendStatus(http.StatusOK)
 	})
 }
 

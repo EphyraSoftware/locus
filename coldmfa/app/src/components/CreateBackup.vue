@@ -1,6 +1,10 @@
 <script setup lang="ts">
 import type { AxiosInstance } from 'axios'
-import { inject, onMounted, ref, useTemplateRef } from 'vue'
+import { inject, nextTick, onMounted, ref, useTemplateRef } from 'vue'
+
+const emit = defineEmits<{
+  completed: [x: void]
+}>()
 
 const client = inject<AxiosInstance>('client') as AxiosInstance
 
@@ -25,7 +29,9 @@ const downloadBackup = async () => {
     )
 
     downloadContent.value = backup.data
+    await nextTick()
     downloadAnchor.value?.click()
+    emit('completed')
   } catch (e) {
     console.error(e)
   }

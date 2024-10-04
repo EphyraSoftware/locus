@@ -36,6 +36,11 @@ type BackupRequest struct {
 	Password string `json:"password"`
 }
 
+type RestoreBackupRequest struct {
+	BackupContent []byte `json:"backupContent"`
+	Password      string `json:"password"`
+}
+
 type CodeBackup struct {
 	BackupVersion string       `json:"backupVersion"`
 	BackupItems   []BackupItem `json:"backup"`
