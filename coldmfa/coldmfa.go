@@ -575,6 +575,35 @@ func (a *App) Prepare() {
 
 		return c.SendStatus(http.StatusOK)
 	})
+
+	api.Get("/backups/warning", func(c *fiber.Ctx) error {
+		sessionId := auth.SessionId(c)
+		if sessionId == "" {
+			return c.SendStatus(http.StatusUnauthorized)
+		}
+
+		lastBackupRow := db.QueryRow("select last_backup.backup_at from last_backup where last_backup.owner_id = $1", sessionId)
+		countRow := db.QueryRow("select count(code.id) from last_backup left join code_group on code_group.owner_id = last_backup.owner_id left join code on code.code_group_id = code_group.id where last_backup.owner_id = $1 and code.created_at > last_backup.backup_at group by last_backup.owner_id, last_backup.backup_at", sessionId)
+
+		var warning BackupWarning
+		err := lastBackupRow.Scan(&warning.LastBackupAt)
+		if err != nil && !errors.Is(err, sql.ErrNoRows) {
+			log.Errorf("failed to read warning: %s", err.Error())
+			return c.Status(http.StatusInternalServerError).JSON(ApiError{Error: "database error"})
+		}
+
+		err = countRow.Scan(&warning.NumberNotBackedUp)
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				warning.NumberNotBackedUp = 0
+			} else {
+				log.Errorf("failed to read warning: %s", err.Error())
+				return c.Status(http.StatusInternalServerError).JSON(ApiError{Error: "database error"})
+			}
+		}
+
+		return c.Status(http.StatusOK).JSON(warning)
+	})
 }
 
 func readCodeGroup(context context.Context, db *sql.DB, ownerId string, groupId string) (*CodeGroup, error) {

@@ -22,3 +22,8 @@ export interface PasscodeResponse {
   serverTime: number
   period: number
 }
+
+export interface BackupWarning {
+  lastBackupAt?: number
+  numberNotBackedUp: number
+}

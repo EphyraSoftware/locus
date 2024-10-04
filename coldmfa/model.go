@@ -55,3 +55,8 @@ type BackupItem struct {
 	Deleted       *bool      `json:"deleted"`
 	DeletedAt     *time.Time `json:"deletedAt"`
 }
+
+type BackupWarning struct {
+	LastBackupAt      *time.Time `json:"lastBackupAt"`
+	NumberNotBackedUp int        `json:"numberNotBackedUp"`
+}

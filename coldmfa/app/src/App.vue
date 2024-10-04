@@ -5,6 +5,7 @@ import CreateCodeGroup from '@/components/CreateCodeGroup.vue'
 import CodeGroups from '@/components/CodeGroups.vue'
 import CreateBackup from '@/components/CreateBackup.vue'
 import RestoreBackup from '@/components/RestoreBackup.vue'
+import type { BackupWarning } from '@/types'
 
 interface UserName {
   username: string
@@ -20,6 +21,8 @@ interface User {
 }
 
 const user = ref('')
+const lastBackup = ref<string>()
+const numberNotBackedUp = ref<number>()
 const showNewGroup = ref(false)
 const showBackup = ref(false)
 const showRestore = ref(false)
@@ -39,6 +42,22 @@ client.get('api/user').then((response) => {
   const u = response.data as User
   user.value = u.user.name.username
 })
+
+client
+  .get('api/backups/warning', { validateStatus: (s) => s === 200 })
+  .then((response) => {
+    const warning = response.data as BackupWarning
+    if (warning.lastBackupAt) {
+      lastBackup.value = new Date(warning.lastBackupAt).toString()
+    } else {
+      lastBackup.value = 'Never'
+    }
+    console.log(warning)
+    numberNotBackedUp.value = warning.numberNotBackedUp
+  })
+  .catch((e) => {
+    console.error(e)
+  })
 
 const showCreateGroup = () => {
   showNewGroup.value = !showNewGroup.value
@@ -75,7 +94,20 @@ const backupCompleted = () => {
   </header>
 
   <main class="container mx-auto">
-    <p>Welcome, {{ user }}</p>
+    <div class="flex flex-row">
+      <div class="w-1/2">
+        <p>Welcome, {{ user }}</p>
+      </div>
+      <div class="flex justify-end w-1/2">
+        <p class="text-right">
+          <span v-if="lastBackup">Last backup at: {{ lastBackup }}</span
+          ><br />
+          <span v-if="numberNotBackedUp && numberNotBackedUp > 0"
+            >You have {{ numberNotBackedUp }} code needing backup</span
+          >
+        </p>
+      </div>
+    </div>
 
     <div class="flex w-full justify-end">
       <div class="join p-2 mt-2">
