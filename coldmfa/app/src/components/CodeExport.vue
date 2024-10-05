@@ -67,7 +67,9 @@ watch(
     <p class="mx-auto mb-2 text-accent text-2xl">{{ code.preferredName ?? code.name }}</p>
     <p class="mx-auto cursor-pointer" v-if="autoHidden" @click="revealImage">Hidden...</p>
     <img v-else alt="QR code" v-bind:src="imgSrc" />
-    <button class="btn btn-accent my-5" @click="$emit('close')">Close</button>
+    <button class="btn btn-accent my-5" @click="$emit('close')" data-test-id="close-export">
+      Close
+    </button>
   </div>
 </template>
 

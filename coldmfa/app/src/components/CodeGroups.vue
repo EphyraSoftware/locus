@@ -64,7 +64,7 @@ client
   </div>
 
   <div class="my-3">
-    <CodeList :group-id="selectedGroupId" />
+    <CodeList :group-id="selectedGroupId" :show-update-name-button="false" />
   </div>
 </template>
 

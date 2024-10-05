@@ -9,6 +9,7 @@ import TickerProvider from '@/components/TickerProvider.vue'
 
 const props = defineProps<{
   groupId: string
+  showUpdateNameButton: boolean
 }>()
 
 const client = inject<AxiosInstance>('client') as AxiosInstance
@@ -85,6 +86,7 @@ watch(
       :disabled="!codes || codes.length === 0"
       class="select select-bordered w-full max-w-xs"
       v-model="sortBy"
+      data-test-id="sort-by"
     >
       <option value="alpha">Alphabetical</option>
       <option value="create">Creation date</option>
@@ -92,7 +94,12 @@ watch(
     <div class="form-control ms-5">
       <label class="label cursor-pointer">
         <span class="pe-2 text-lg">Show deleted</span>
-        <input type="checkbox" v-model="showDeleted" class="checkbox checkbox-md" />
+        <input
+          type="checkbox"
+          v-model="showDeleted"
+          class="checkbox checkbox-md"
+          data-test-id="show-deleted"
+        />
       </label>
     </div>
   </div>
@@ -107,7 +114,7 @@ watch(
           <CodeSummaryLine
             :group-id="props.groupId"
             :code-id="code.codeId"
-            :show-name-update-button="false"
+            :show-name-update-button="props.showUpdateNameButton"
             @show-export="
               (codeId) => {
                 showExportFor = codes?.find((c) => c.codeId === codeId)
