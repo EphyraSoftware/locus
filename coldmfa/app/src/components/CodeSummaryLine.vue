@@ -57,7 +57,6 @@ const renameCode = async () => {
     let newPreferredName = codeName.value?.textContent
     if (
       newPreferredName === null ||
-      newPreferredName === currentCode?.name ||
       newPreferredName === currentCode?.preferredName
     ) {
       return

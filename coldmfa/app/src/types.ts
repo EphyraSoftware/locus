@@ -12,6 +12,7 @@ export interface CodeSummary {
   codeId: string
   name: string
   preferredName?: string
+  createdAt: number
   deleted: boolean
   deletedAt?: number
 }

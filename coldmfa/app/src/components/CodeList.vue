@@ -15,8 +15,29 @@ const client = inject<AxiosInstance>('client') as AxiosInstance
 const groupsStore = useGroupsStore()
 const showExportFor = ref<CodeSummary>()
 
-const codes = computed(() => groupsStore.groupCodes(props.groupId))
 const sortBy = ref<'alpha' | 'create'>('alpha')
+const showDeleted = ref(false)
+const codes = computed(() => {
+  let groupCodes = groupsStore.groupCodes(props.groupId)
+  if (groupCodes) {
+    groupCodes.sort((a, b) => {
+      if (sortBy.value === 'alpha') {
+        const aName = a.preferredName ?? a.name
+        const bName = b.preferredName ?? b.name
+
+        return aName.localeCompare(bName)
+      } else {
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      }
+    })
+
+    if (!showDeleted.value) {
+      groupCodes = groupCodes?.filter((code) => !code.deleted)
+    }
+  }
+
+  return groupCodes
+})
 
 const fetchGroup = async (client: AxiosInstance, groupId: string) => {
   if (groupId != '') {
@@ -68,6 +89,12 @@ watch(
       <option value="alpha">Alphabetical</option>
       <option value="create">Creation date</option>
     </select>
+    <div class="form-control ms-5">
+      <label class="label cursor-pointer">
+        <span class="pe-2 text-lg">Show deleted</span>
+        <input type="checkbox" v-model="showDeleted" class="checkbox checkbox-md" />
+      </label>
+    </div>
   </div>
 
   <div class="flex flex-col">

@@ -49,6 +49,7 @@ const handlers = [
       const newCode = {
         codeId: nanoid(),
         name: new URL(r['original']).pathname.substring(1),
+        createdAt: Math.round(new Date().valueOf() / 1000),
         deleted: false
       }
 
