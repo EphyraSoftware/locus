@@ -97,6 +97,7 @@ watch(
         <input
           type="checkbox"
           v-model="showDeleted"
+          :disabled="!codes || codes.length === 0"
           class="checkbox checkbox-md"
           data-test-id="show-deleted"
         />
