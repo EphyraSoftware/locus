@@ -16,6 +16,7 @@ const client = inject<AxiosInstance>('client') as AxiosInstance
 
 const imgSrc = ref('')
 const autoHidden = ref(false)
+let timeout: number | null = null
 
 const fetchQR = async (): Promise<ArrayBuffer | null> => {
   try {
@@ -34,7 +35,7 @@ const fetchQR = async (): Promise<ArrayBuffer | null> => {
 
 const revealImage = () => {
   autoHidden.value = false
-  setTimeout(() => {
+  timeout = window.setTimeout(() => {
     autoHidden.value = true
   }, 5_000)
 }
@@ -49,6 +50,11 @@ watch(
 watch(
   () => props.code,
   () => {
+    if (timeout) {
+      clearTimeout(timeout)
+      timeout = null
+    }
+
     fetchQR().then((bytes) => {
       if (bytes) {
         //@ts-ignore
