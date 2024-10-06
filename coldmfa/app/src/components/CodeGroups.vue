@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import type { AxiosError, AxiosInstance, AxiosResponse } from 'axios'
+import type { AxiosInstance, AxiosResponse } from 'axios'
 import type { ApiError, CodeGroup } from '@/types'
-import { inject, ref } from 'vue'
+import { inject, onMounted, ref } from 'vue'
 import CreateCode from '@/components/CreateCode.vue'
 import CodeList from '@/components/CodeList.vue'
 import { useGroupsStore } from '@/stores/groups'
@@ -17,21 +17,20 @@ groupsStore.$subscribe((_, state) => {
   }
 })
 
-client
-  .get('api/groups')
-  .then((response: AxiosResponse<CodeGroup[] | ApiError>) => {
-    if (response.status === 200) {
-      groupsStore.setGroups(response.data as CodeGroup[])
-      if (groupsStore.groups.length > 0) {
-        selectedGroupId.value = groupsStore.groups[0].groupId
-      }
-    } else {
-      console.error(response.data)
+onMounted(async () => {
+  try {
+    const response: AxiosResponse<CodeGroup[] | ApiError> = await client.get('api/groups', {
+      validateStatus: (status) => status === 200
+    })
+
+    groupsStore.setGroups(response.data as CodeGroup[])
+    if (groupsStore.groups.length > 0) {
+      selectedGroupId.value = groupsStore.groups[0].groupId
     }
-  })
-  .catch((err: AxiosError) => {
-    console.error(err)
-  })
+  } catch (e) {
+    console.error(e)
+  }
+})
 </script>
 
 <template>
@@ -40,6 +39,7 @@ client
       v-model="selectedGroupId"
       :disabled="groupsStore.groups.length === 0"
       class="select select-bordered w-full max-w-xs"
+      data-test-id="group-select"
     >
       <option disabled value="">Select a group</option>
       <option v-for="group in groupsStore.groups" :key="group.groupId" :value="group.groupId">
@@ -53,6 +53,7 @@ client
       @click="showNewCode = !showNewCode"
       :disabled="selectedGroupId === ''"
       class="btn btn-secondary rounded p-2 mt-2"
+      data-test-id="new-code"
     >
       New code
     </button>

@@ -12,20 +12,25 @@ const handlers = [
     return new Response(null, {
       status: 200,
       headers: {
-        Allow: 'GET,HEAD,POST'
+        Allow: 'GET,HEAD,POST,PUT'
       }
     })
   }),
 
-  http.post('http://127.0.0.1:3000/coldmfa/api/groups', () => {
+  http.post('http://127.0.0.1:3000/coldmfa/api/groups', async ({ request }) => {
     if (nextIsHttpErr) {
       nextIsHttpErr = false
       return HttpResponse.json({ error: 'A test error' }, { status: 500 })
     }
 
+    const requestData = await request.json()
+    if (!requestData || typeof requestData !== 'object' || !('name' in requestData)) {
+      return HttpResponse.json({ error: 'Invalid request' }, { status: 400 })
+    }
+
     const newGroup = {
       groupId: nanoid(),
-      name: 'Test Group',
+      name: requestData.name,
       codes: []
     }
     data[newGroup.groupId] = newGroup
@@ -67,6 +72,41 @@ const handlers = [
       return HttpResponse.json(newCode, { status: 201 })
     }
   ),
+
+  http.get('http://127.0.0.1:3000/coldmfa/api/groups', async () => {
+    if (nextIsHttpErr) {
+      nextIsHttpErr = false
+      return HttpResponse.json({ error: 'A test error' }, { status: 500 })
+    }
+
+    const groups = Object.values(data)
+
+    const response = groups.map((g) => {
+      return {
+        groupId: g.groupId,
+        name: g.name
+      } as CodeGroup
+    })
+
+    return HttpResponse.json(response, { status: 200 })
+  }),
+
+  http.get('http://127.0.0.1:3000/coldmfa/api/groups/:groupId', async ({ params }) => {
+    if (nextIsHttpErr) {
+      nextIsHttpErr = false
+      return HttpResponse.json({ error: 'A test error' }, { status: 500 })
+    }
+
+    const groupId = params['groupId'] as string
+
+    if (!data[groupId]) {
+      return HttpResponse.json({ error: 'Group not found' }, { status: 404 })
+    }
+
+    const response = data[groupId]
+
+    return HttpResponse.json(response, { status: 200 })
+  }),
 
   http.get('http://127.0.0.1:3000/coldmfa/api/groups/:groupId/codes/:codeId', async () => {
     if (nextIsHttpErr) {

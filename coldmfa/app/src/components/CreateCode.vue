@@ -68,11 +68,14 @@ const storeCode = async () => {
       autocomplete="off"
       ref="codeNameInput"
       v-model="original"
+      data-test-id="code-original"
     />
     <p v-if="errMsg" class="text-red-500 py-2">Error creating your code: {{ errMsg }}</p>
 
     <div class="flex flex-row justify-end my-2 mx-1">
-      <button class="btn btn-primary rounded p-2 mt-2" type="submit">Store code</button>
+      <button class="btn btn-primary rounded p-2 mt-2" type="submit" data-test-id="create-code">
+        Store code
+      </button>
     </div>
   </form>
 </template>

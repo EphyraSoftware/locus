@@ -135,7 +135,7 @@ describe('CodeSummaryLine', () => {
 
     expect(wrapper.html()).toContain('123456')
 
-    for (let i = 0; i < 60; i++) {
+    for (let i = 0; i < 61; i++) {
       vi.advanceTimersToNextTimer()
       await nextTick()
 
