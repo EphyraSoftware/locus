@@ -1,7 +1,7 @@
 import { http, HttpResponse } from 'msw'
 import { setupServer } from 'msw/node'
 import { nanoid } from 'nanoid'
-import type { CodeGroup, PasscodeResponse } from '@/types'
+import type { BackupWarning, CodeGroup, PasscodeResponse, User } from '@/types'
 
 let nextIsHttpErr = false
 
@@ -15,6 +15,13 @@ const handlers = [
         Allow: 'GET,HEAD,POST,PUT'
       }
     })
+  }),
+
+  http.get('http://127.0.0.1:3000/coldmfa/api/user', async () => {
+    return HttpResponse.json(
+      { user: { email: 'tester@test.net', name: { username: 'testuser' } } } as User,
+      { status: 200 }
+    )
   }),
 
   http.post('http://127.0.0.1:3000/coldmfa/api/groups', async ({ request }) => {
@@ -192,7 +199,11 @@ const handlers = [
 
       return new HttpResponse(null, { status: 204 })
     }
-  )
+  ),
+
+  http.get('http://127.0.0.1:3000/coldmfa/api/backups/warning', async () => {
+    return HttpResponse.json({ numberNotBackedUp: 0 } as BackupWarning, { status: 200 })
+  })
 ]
 
 const server = setupServer(...handlers)

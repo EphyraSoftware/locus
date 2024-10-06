@@ -2,6 +2,19 @@ export interface ApiError {
   error: string
 }
 
+export interface UserName {
+  username: string
+}
+
+export interface UserDetails {
+  email: string
+  name: UserName
+}
+
+export interface User {
+  user: UserDetails
+}
+
 export interface CodeGroup {
   groupId: string
   name: string

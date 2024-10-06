@@ -1,24 +1,15 @@
 <script setup lang="ts">
-import axios from 'axios'
-import { provide, ref } from 'vue'
+import { type AxiosInstance } from 'axios'
+import { onMounted, provide, ref } from 'vue'
 import CreateCodeGroup from '@/components/CreateCodeGroup.vue'
 import CodeGroups from '@/components/CodeGroups.vue'
 import CreateBackup from '@/components/CreateBackup.vue'
 import RestoreBackup from '@/components/RestoreBackup.vue'
-import type { BackupWarning } from '@/types'
+import type { User, BackupWarning } from '@/types'
 
-interface UserName {
-  username: string
-}
-
-interface UserDetails {
-  email: string
-  name: UserName
-}
-
-interface User {
-  user: UserDetails
-}
+const props = defineProps<{
+  client: AxiosInstance
+}>()
 
 const user = ref('')
 const lastBackup = ref<string>()
@@ -27,37 +18,31 @@ const showNewGroup = ref(false)
 const showBackup = ref(false)
 const showRestore = ref(false)
 
-const client = axios.create({
-  baseURL: import.meta.env.DEV ? 'http://127.0.0.1:3000/coldmfa' : import.meta.env.BASE_URL,
-  headers: {
-    'Content-Type': 'application/json',
-    Accept: 'application/json'
-  },
-  withCredentials: true
-})
+provide('client', props.client)
 
-provide('client', client)
+onMounted(async () => {
+  try {
+    const [userResponse, warningResponse] = await Promise.all([
+      props.client.get('api/user', {
+        validateStatus: (status) => status === 200
+      }),
+      props.client.get('api/backups/warning', { validateStatus: (s) => s === 200 })
+    ])
 
-client.get('api/user').then((response) => {
-  const u = response.data as User
-  user.value = u.user.name.username
-})
+    const u = userResponse.data as User
+    user.value = u.user.name.username
 
-client
-  .get('api/backups/warning', { validateStatus: (s) => s === 200 })
-  .then((response) => {
-    const warning = response.data as BackupWarning
+    const warning = warningResponse.data as BackupWarning
     if (warning.lastBackupAt) {
       lastBackup.value = new Date(warning.lastBackupAt).toString()
     } else {
       lastBackup.value = 'Never'
     }
-    console.log(warning)
     numberNotBackedUp.value = warning.numberNotBackedUp
-  })
-  .catch((e) => {
+  } catch (e) {
     console.error(e)
-  })
+  }
+})
 
 const showCreateGroup = () => {
   showNewGroup.value = !showNewGroup.value
@@ -103,7 +88,8 @@ const backupCompleted = () => {
           <span v-if="lastBackup">Last backup at: {{ lastBackup }}</span
           ><br />
           <span v-if="numberNotBackedUp && numberNotBackedUp > 0"
-            >You have {{ numberNotBackedUp }} code needing backup</span
+            >You have {{ numberNotBackedUp }} code{{ numberNotBackedUp > 1 ? 's' : '' }} needing
+            backup</span
           >
         </p>
       </div>
@@ -111,9 +97,27 @@ const backupCompleted = () => {
 
     <div class="flex w-full justify-end">
       <div class="join p-2 mt-2">
-        <button @click="showCreateGroup" class="btn btn-secondary join-item">New group</button>
-        <button @click="showCreateBackup" class="btn btn-secondary join-item">Backup</button>
-        <button @click="showRestoreBackup" class="btn btn-secondary join-item">Restore</button>
+        <button
+          @click="showCreateGroup"
+          class="btn btn-secondary join-item"
+          data-test-id="new-group"
+        >
+          New group
+        </button>
+        <button
+          @click="showCreateBackup"
+          class="btn btn-secondary join-item"
+          data-test-id="start-backup"
+        >
+          Backup
+        </button>
+        <button
+          @click="showRestoreBackup"
+          class="btn btn-secondary join-item"
+          data-test-id="start-restore"
+        >
+          Restore
+        </button>
       </div>
     </div>
     <div class="flex justify-center">
