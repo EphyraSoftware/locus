@@ -42,7 +42,7 @@ const downloadBackup = async () => {
   <p class="text-xl bold">Enter a password to encrypt the backup with</p>
   <form class="flex flex-col py-2" @submit.prevent.stop="downloadBackup">
     <input
-      type="text"
+      type="password"
       placeholder="Password"
       class="input input-bordered input-accent w-full max-w-s"
       autocomplete="off"
