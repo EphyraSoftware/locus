@@ -9,6 +9,32 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  build-locus:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: 'go.mod'
+
+      - name: Install dependencies
+        run: |
+          go get .
+
+      - name: Format
+        run: gofmt -l .
+
+      - name: Build
+        run: go build -v ./...
+
+      - name: Vet
+        run: go vet ./...
+
+      - name: Test
+        run: go test ./...
+
   build-coldmfa-app:
     runs-on: ubuntu-latest
     steps:
