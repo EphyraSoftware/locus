@@ -1,6 +1,5 @@
 package coldmfa
 
-import "C"
 import (
 	"context"
 	"database/sql"
