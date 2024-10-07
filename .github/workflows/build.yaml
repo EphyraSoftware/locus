@@ -1,0 +1,36 @@
+name: Build
+
+on:
+  push:
+    branches: [ main ]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-coldmfa-app:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        working-directory: coldmfa/app
+        run: npm ci
+
+      - name: Type check
+        working-directory: coldmfa/app
+        run: npm run type-check
+
+      - name: Lint
+        working-directory: coldmfa/app
+        run: npm run lint:check
+
+      - name: Format
+        working-directory: coldmfa/app
+        run: npm run format:check
+
+      - name: Test
+        working-directory: coldmfa/app
+        run: npm test
