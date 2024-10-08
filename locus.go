@@ -23,9 +23,11 @@ var public embed.FS
 
 func main() {
 	config := ory.NewConfiguration()
-	oryPort := 4433
-	oryBase := fmt.Sprintf("http://127.0.0.1:%d/", oryPort)
-	config.Servers = ory.ServerConfigurations{{URL: oryBase}}
+	oryPublicUrl := os.Getenv("ORY_PUBLIC_URL")
+	if oryPublicUrl == "" {
+		oryPublicUrl = "http://127.0.0.1:4433"
+	}
+	config.Servers = ory.ServerConfigurations{{URL: oryPublicUrl}}
 
 	oryClient := ory.NewAPIClient(config)
 
@@ -53,14 +55,25 @@ func main() {
 		oryAuthApp := auth.App{
 			Router:  app.Group("/auth"),
 			Ory:     oryClient,
-			OryBase: oryBase,
+			OryBase: oryPublicUrl,
 		}
 		oryAuthApp.Prepare(app)
 	}
 
+	databaseUrlPath := os.Getenv("DATABASE_URL_FILE")
+	var databaseUrl string
+	if databaseUrlPath == "" {
+		databaseUrl = "postgres://coldmfa:coldmfa@localhost:5432/coldmfa?sslmode=disable"
+	} else {
+		databaseUrlBytes, err := os.ReadFile(databaseUrlPath)
+		if err != nil {
+			log.Fatal(err)
+		}
+		databaseUrl = string(databaseUrlBytes)
+	}
 	coldMfaApp := coldmfa.App{
 		Router:      app.Group("/coldmfa"),
-		DatabaseUrl: "postgres://coldmfa:coldmfa@localhost:5432/coldmfa?sslmode=disable",
+		DatabaseUrl: databaseUrl,
 		Public:      public,
 	}
 	coldMfaApp.Prepare()
