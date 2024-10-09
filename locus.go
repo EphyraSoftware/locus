@@ -79,6 +79,7 @@ func main() {
 	coldMfaApp.Prepare()
 
 	app.Get("/", func(c *fiber.Ctx) error {
+		log.Debug("Redirecting to coldmfa")
 		return c.Redirect("/coldmfa")
 	})
 

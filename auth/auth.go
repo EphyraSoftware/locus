@@ -42,13 +42,14 @@ func (a *App) Prepare(app *fiber.App) {
 
 		cookies, err := getCookiesFromRequest(c)
 		if err != nil {
-			log.Info("No cookies")
+			log.Errorf("No cookies: %s", err)
 			return c.SendStatus(http.StatusBadRequest)
 		}
 
 		req := a.Ory.FrontendAPI.GetLoginFlow(c.Context()).Id(flowId).Cookie(cookies)
 		flow, _, err := a.Ory.FrontendAPI.GetLoginFlowExecute(req)
 		if err != nil {
+			log.Errorf("Error getting login flow: %s", err)
 			return c.SendStatus(http.StatusInternalServerError)
 		}
 
@@ -61,17 +62,20 @@ func (a *App) Prepare(app *fiber.App) {
 	a.Router.Get("/register", func(c *fiber.Ctx) error {
 		flowId := c.Query("flow")
 		if flowId == "" {
+			log.Info("No flow id")
 			return c.SendStatus(http.StatusBadRequest)
 		}
 
 		cookies, err := getCookiesFromRequest(c)
 		if err != nil {
+			log.Errorf("No cookies: %s", err)
 			return c.SendStatus(http.StatusBadRequest)
 		}
 
 		req := a.Ory.FrontendAPI.GetRegistrationFlow(c.Context()).Id(flowId).Cookie(cookies)
 		flow, _, err := a.Ory.FrontendAPI.GetRegistrationFlowExecute(req)
 		if err != nil {
+			log.Errorf("Error getting registration flow: %s", err)
 			return c.SendStatus(http.StatusInternalServerError)
 		}
 
@@ -81,17 +85,20 @@ func (a *App) Prepare(app *fiber.App) {
 	a.Router.Get("/verification", func(c *fiber.Ctx) error {
 		flowId := c.Query("flow")
 		if flowId == "" {
+			log.Info("No flow id")
 			return c.SendStatus(http.StatusBadRequest)
 		}
 
 		cookies, err := getCookiesFromRequest(c)
 		if err != nil {
+			log.Errorf("No cookies: %s", err)
 			return c.SendStatus(http.StatusBadRequest)
 		}
 
 		req := a.Ory.FrontendAPI.GetVerificationFlow(c.Context()).Id(flowId).Cookie(cookies)
 		flow, _, err := a.Ory.FrontendAPI.GetVerificationFlowExecute(req)
 		if err != nil {
+			log.Errorf("Error getting verification flow: %s", err)
 			return c.SendStatus(http.StatusInternalServerError)
 		}
 
@@ -123,6 +130,7 @@ func (a *App) Prepare(app *fiber.App) {
 		req := a.Ory.FrontendAPI.CreateBrowserLogoutFlow(c.Context()).Cookie(cookie)
 		url, _, err := a.Ory.FrontendAPI.CreateBrowserLogoutFlowExecute(req)
 		if err != nil {
+			log.Errorf("Error creating logout flow: %s", err)
 			return c.SendStatus(http.StatusInternalServerError)
 		}
 
