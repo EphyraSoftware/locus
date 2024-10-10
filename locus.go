@@ -29,6 +29,11 @@ func main() {
 	}
 	config.Servers = ory.ServerConfigurations{{URL: oryPublicUrl}}
 
+	oryPublicBrowserUrl := os.Getenv("ORY_PUBLIC_BROWSER_URL")
+	if oryPublicBrowserUrl == "" {
+		oryPublicBrowserUrl = oryPublicUrl
+	}
+
 	oryClient := ory.NewAPIClient(config)
 
 	log.SetLevel(log.LevelInfo)
@@ -53,9 +58,9 @@ func main() {
 	} else {
 		log.Info("Running in production mode")
 		oryAuthApp := auth.App{
-			Router:  app.Group("/auth"),
-			Ory:     oryClient,
-			OryBase: oryPublicUrl,
+			Router:         app.Group("/auth"),
+			Ory:            oryClient,
+			OryBrowserBase: oryPublicBrowserUrl,
 		}
 		oryAuthApp.Prepare(app)
 	}

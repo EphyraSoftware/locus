@@ -9,9 +9,9 @@ import (
 )
 
 type App struct {
-	Router  fiber.Router
-	Ory     *ory.APIClient
-	OryBase string
+	Router         fiber.Router
+	Ory            *ory.APIClient
+	OryBrowserBase string
 }
 
 func SessionUser(c *fiber.Ctx) interface{} {
@@ -55,7 +55,7 @@ func (a *App) Prepare(app *fiber.App) {
 
 		return c.Render("public/auth/login", fiber.Map{
 			"Flow":        flow,
-			"RegisterUrl": fmt.Sprintf("%sself-service/registration/browser", a.OryBase),
+			"RegisterUrl": fmt.Sprintf("%sself-service/registration/browser", a.OryBrowserBase),
 		})
 	})
 
@@ -109,14 +109,14 @@ func (a *App) Prepare(app *fiber.App) {
 	app.Use(func(c *fiber.Ctx) error {
 		cookies := c.GetReqHeaders()["Cookie"]
 		if len(cookies) == 0 {
-			return c.Redirect(fmt.Sprintf("%sself-service/login/browser", a.OryBase), http.StatusSeeOther)
+			return c.Redirect(fmt.Sprintf("%sself-service/login/browser", a.OryBrowserBase), http.StatusSeeOther)
 		}
 
 		// check if we have a session
 		session, _, err := a.Ory.FrontendAPI.ToSession(c.Context()).Cookie(cookies[0]).Execute()
 		if (err != nil && session == nil) || (err == nil && !*session.Active) {
 			// this will redirect the user to the managed Ory Login UI
-			return c.Redirect(fmt.Sprintf("%sself-service/login/browser", a.OryBase), http.StatusSeeOther)
+			return c.Redirect(fmt.Sprintf("%sself-service/login/browser", a.OryBrowserBase), http.StatusSeeOther)
 		}
 
 		c.Locals("cookies", cookies[0])
