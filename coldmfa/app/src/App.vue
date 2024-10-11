@@ -69,6 +69,12 @@ const groupCreated = () => {
 const backupCompleted = () => {
   showBackup.value = false
 }
+
+const doLogout = () => {
+  const current = new URL(window.location.href)
+  current.pathname = 'auth/logout'
+  window.location.replace(current)
+}
 </script>
 
 <template>
@@ -118,6 +124,7 @@ const backupCompleted = () => {
         >
           Restore
         </button>
+        <button @click="doLogout" class="btn btn-primary join-item">Logout</button>
       </div>
     </div>
     <div class="flex justify-center">
