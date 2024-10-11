@@ -33,7 +33,7 @@
                     }}</label>
                 <input autocomplete="{{ .Autocomplete }}" type="{{ .Type }}" name="{{ .Name }}"
                        placeholder="{{ with $val.Meta.Label }}{{ .Text }}{{ else }}{{ end }}" class="form-control"
-                       id="a-{{ .Name }}" required="required"/>
+                       id="a-{{ .Name }}"/>
             </div>
             {{end}}
             {{ else if eq $val.Attributes.UiNodeInputAttributes.Type "text" }}
