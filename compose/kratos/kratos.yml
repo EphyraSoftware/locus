@@ -1,8 +1,6 @@
 # https://github.com/ory/kratos/blob/master/contrib/quickstart/kratos/email-password/kratos.yml
 
-version: v0.13.0
-
-#dsn: memory
+version: v1.2.0
 
 serve:
   public:
@@ -16,8 +14,6 @@ selfservice:
   default_browser_return_url: http://127.0.0.1:3000/
   allowed_return_urls:
     - http://127.0.0.1:4455
-    - http://localhost:19006/Callback
-    - exp://localhost:8081/--/Callback
 
   methods:
     password:
@@ -99,6 +95,7 @@ identity:
 courier:
   smtp:
     connection_uri: smtps://test:test@mailslurper:1025/?skip_ssl_verify=true
+    from_address: locus@somedomain.com
 
 feature_flags:
   use_continue_with_transitions: true
