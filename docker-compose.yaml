@@ -1,6 +1,6 @@
 services:
   db:
-    image: postgres:16-alpine
+    image: postgres:17-alpine
     restart: unless-stopped
     shm_size: 128mb
     environment:
@@ -45,18 +45,6 @@ services:
       - ./compose/kratos/:/etc/config/kratos/
     networks:
       - default
-  kratos-selfservice-ui-node:
-    image: oryd/kratos-selfservice-ui-node:v1.2.0
-    ports:
-      - "4455:4455"
-    environment:
-      - PORT=4455
-      - SECURITY_MODE=
-      - KRATOS_PUBLIC_URL=http://kratos:4433/
-      - KRATOS_BROWSER_URL=http://127.0.0.1:4433/
-      - COOKIE_SECRET=dev1secret2
-      - CSRF_COOKIE_NAME=ory_csrf_ui
-      - CSRF_COOKIE_SECRET=dev1csrf2secret3
   mailslurper:
     image: oryd/mailslurper:latest-smtps
     ports:
