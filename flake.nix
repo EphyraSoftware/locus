@@ -13,7 +13,7 @@
       perSystem = { config, self', inputs', pkgs, system, ... }: {
         formatter = pkgs.nixpkgs-fmt;
         devShells.default = pkgs.mkShell {
-          packages = with pkgs; [ ory nodejs_22 ];
+          packages = with pkgs; [ ory nodejs_22 caddy ];
         };
       };
       flake = { };

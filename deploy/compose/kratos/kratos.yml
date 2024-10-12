@@ -1,0 +1,104 @@
+# https://github.com/ory/kratos/blob/master/contrib/quickstart/kratos/email-password/kratos.yml
+
+version: v1.2.0
+
+dsn: postgres://kratos:<kratos password>@db:5432/kratos?sslmode=disable&max_conns=20&max_idle_conns=4
+
+serve:
+  public:
+    base_url: https://locus.net/
+    cors:
+      enabled: true
+  admin:
+    base_url: http://kratos:4434/
+    host: 127.0.0.1
+
+selfservice:
+  default_browser_return_url: https://locus.net/
+  allowed_return_urls:
+    - https://locus.net
+
+  methods:
+    password:
+      enabled: true
+    totp:
+      config:
+        issuer: Kratos
+      enabled: true
+    lookup_secret:
+      enabled: true
+    link:
+      enabled: true
+    code:
+      enabled: true
+
+  flows:
+    error:
+      ui_url: https://locus.net/error
+
+    settings:
+      ui_url: https://locus.net/settings
+      privileged_session_max_age: 15m
+      required_aal: highest_available
+
+    recovery:
+      enabled: true
+      ui_url: https://locus.net/auth/recovery
+      use: code
+
+    verification:
+      enabled: true
+      ui_url: https://locus.net/auth/verification
+      use: code
+      after:
+        default_browser_return_url: https://locus.net/
+
+    logout:
+      after:
+        default_browser_return_url: https://locus.net/
+
+    login:
+      ui_url: https://locus.net/auth/login
+      lifespan: 10m
+
+    registration:
+      lifespan: 10m
+      ui_url: https://locus.net/auth/register
+      after:
+        password:
+          hooks:
+            - hook: session
+            - hook: show_verification_ui
+
+log:
+  level: debug
+  format: text
+  leak_sensitive_values: true
+
+secrets:
+  cookie:
+    - <cookie secret>
+  cipher:
+    - <cipher secret, 32 bytes>
+
+ciphers:
+  algorithm: xchacha20-poly1305
+
+hashers:
+  algorithm: bcrypt
+  bcrypt:
+    cost: 8
+
+identity:
+  default_schema_id: default
+  schemas:
+    - id: default
+      url: file:///etc/config/kratos/identity.schema.json
+
+courier:
+  smtp:
+    connection_uri: <SMTP relay configuration>
+    from_address: locus@somedomain.com
+
+feature_flags:
+  use_continue_with_transitions: true

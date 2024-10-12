@@ -1,0 +1,86 @@
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    shm_size: 128mb
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+      POSTGRES_DB: main
+      POSTGRES_INITDB_ARGS: --auth-host=scram-sha-256
+      POSTGRES_HOST_AUTH_METHOD: scram-sha-256
+    ports:
+      - "5432"
+    networks:
+      - default
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./compose/postgres:/docker-entrypoint-initdb.d/
+    secrets:
+      - postgres_password
+  kratos-migrate:
+    depends_on:
+      - db
+    image: oryd/kratos:v1.2.0
+    command: -c /etc/config/kratos/kratos.yml migrate sql -e --yes
+    restart: on-failure
+    environment:
+      - LOG_LEVEL=warning
+    volumes:
+      - ./compose/kratos/:/etc/config/kratos/
+    networks:
+      - default
+  kratos:
+    depends_on:
+      - kratos-migrate
+    image: oryd/kratos:v1.2.0
+    command: serve -c /etc/config/kratos/kratos.yml --sqa-opt-out --watch-courier
+    restart: unless-stopped
+    ports:
+      - '4433' # public
+      - '4434' # admin
+    environment:
+      - LOG_LEVEL=info
+    volumes:
+      - ./compose/kratos/:/etc/config/kratos/
+    networks:
+      - default
+  locus:
+    depends_on:
+      - db
+      - kratos
+    image: ghcr.io/ephyrasoftware/locus:v0.0.8
+    ports:
+      - '3000'
+    environment:
+      - ORY_PUBLIC_URL=http://kratos:4433
+      - ORY_PUBLIC_BROWSER_URL=https://locus.net/
+      - DATABASE_URL_FILE=/run/secrets/locus_database_url
+    secrets:
+      - locus_database_url
+  proxy:
+    depends_on:
+      - kratos
+      - locus
+    image: caddy:2-alpine
+    ports:
+      - '80:80'
+      - '443:443'
+    volumes:
+      - caddy_data:/data
+      - ./compose/caddy/Caddyfile:/etc/caddy/Caddyfile
+
+networks:
+  default:
+
+volumes:
+  postgres_data:
+    driver: local
+  caddy_data:
+    driver: local
+
+secrets:
+  postgres_password:
+    file: postgres-password.txt
+  locus_database_url:
+    file: locus-database-url.txt
