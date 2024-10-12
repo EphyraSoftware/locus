@@ -3,5 +3,5 @@ locus.net {
     reverse_proxy /sessions/* kratos:4433
     reverse_proxy /* locus:3000
 
-	tls internal
+    tls internal
 }
