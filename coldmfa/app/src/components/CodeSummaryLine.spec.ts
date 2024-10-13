@@ -15,6 +15,7 @@ describe('CodeSummaryLine', () => {
   let client: AxiosInstance
   let pinia: Pinia
   let groupId: string
+  let otherGroupId: string
   let codeId: string
 
   const Host = {
@@ -66,6 +67,15 @@ describe('CodeSummaryLine', () => {
     groupId = resp.data.groupId
     const groupsStore = useGroupsStore()
     groupsStore.insertGroup(resp.data)
+
+    const otherGroupResp: AxiosResponse<CodeGroup> = await client.post(
+      'http://127.0.0.1:3000/coldmfa/api/groups',
+      {
+        name: 'Other Test Group'
+      }
+    )
+    otherGroupId = otherGroupResp.data.groupId
+    groupsStore.insertGroup(otherGroupResp.data)
 
     const codeResp: AxiosResponse<CodeSummary> = await client.post(
       `http://127.0.0.1:3000/coldmfa/api/groups/${groupId}/codes`,
@@ -231,5 +241,50 @@ describe('CodeSummaryLine', () => {
     const groupsStore = useGroupsStore()
     const code = groupsStore.codeById(groupId, codeId)
     expect(code?.deleted).toBe(true)
+  })
+
+  it('move between groups', async () => {
+    const wrapper = mount(Host, {
+      props: {
+        groupId,
+        codeId
+      },
+      global: {
+        provide: {
+          client
+        }
+      }
+    })
+
+    expect(wrapper.html()).toContain('EphyraSoftware:test-a')
+
+    await wrapper.get('button[data-test-id="move"]').trigger('click')
+
+    const otherGroups = wrapper.findAll('li')
+    expect(otherGroups.length).toBe(1)
+    expect(otherGroups[0].html()).toContain('Other Test Group')
+    expect(otherGroups[0].isVisible()).toBe(true)
+
+    // Select the group to switch to and click it
+    // That triggers a move request to the backend and should update the store
+    await otherGroups[0].trigger('click')
+    await flushPromises()
+
+    expect(wrapper.html()).not.toContain('EphyraSoftware:test-a')
+
+    // Switch to the other group, where the code should have moved to
+    await wrapper.setProps({
+      groupId: otherGroupId
+    })
+
+    // Now it's showing again
+    expect(wrapper.html()).toContain('EphyraSoftware:test-a')
+
+    // Check the state was correctly updated in the store
+    const groupsStore = useGroupsStore()
+    const removedCode = groupsStore.codeById(groupId, codeId)
+    expect(removedCode).toBe(undefined)
+    const code = groupsStore.codeById(otherGroupId, codeId)
+    expect(code?.codeId).toBe(codeId)
   })
 })

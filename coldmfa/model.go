@@ -60,3 +60,7 @@ type BackupWarning struct {
 	LastBackupAt      *time.Time `json:"lastBackupAt"`
 	NumberNotBackedUp int        `json:"numberNotBackedUp"`
 }
+
+type MoveCodeRequest struct {
+	ToGroupId string `json:"toGroupId"`
+}

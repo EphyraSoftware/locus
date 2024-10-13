@@ -344,6 +344,51 @@ func (a *App) Prepare() {
 		return c.SendStatus(http.StatusNoContent)
 	})
 
+	api.Post("/groups/:groupId/codes/:codeId/move", func(c *fiber.Ctx) error {
+		sessionId := auth.SessionId(c)
+		if sessionId == "" {
+			return c.SendStatus(http.StatusUnauthorized)
+		}
+
+		currentGroupId := c.Params("groupId")
+		if currentGroupId == "" {
+			return c.Status(http.StatusBadRequest).JSON(ApiError{Error: "missing groupId"})
+		}
+
+		codeId := c.Params("codeId")
+		if codeId == "" {
+			return c.Status(http.StatusBadRequest).JSON(ApiError{Error: "missing codeId"})
+		}
+
+		moveCodeRequest := new(MoveCodeRequest)
+		if err := c.BodyParser(moveCodeRequest); err != nil {
+			return c.Status(http.StatusBadRequest).JSON(ApiError{Error: "invalid request"})
+		}
+
+		if moveCodeRequest.ToGroupId == "" {
+			return c.Status(http.StatusBadRequest).JSON(ApiError{Error: "missing toGroupId"})
+		}
+
+		result, err := db.ExecContext(c.Context(), "update code set code_group_id = (select id from code_group where owner_id = $1 and group_id = $2) where deleted = false and code_group_id = (select id from code_group where owner_id = $1 and group_id = $3) and code_id = $4", sessionId, moveCodeRequest.ToGroupId, currentGroupId, codeId)
+
+		if err != nil {
+			log.Errorf("failed to move code: %s", err.Error())
+			return c.Status(http.StatusInternalServerError).JSON(ApiError{Error: "database error"})
+		}
+
+		rowsAffected, err := result.RowsAffected()
+		if err != nil {
+			log.Errorf("failed to update code: %s", err.Error())
+			return c.Status(http.StatusInternalServerError).JSON(ApiError{Error: "database error"})
+		}
+
+		if rowsAffected == 0 {
+			return c.Status(http.StatusNotFound).JSON(ApiError{Error: "code or target group not found"})
+		}
+
+		return c.SendStatus(http.StatusNoContent)
+	})
+
 	api.Delete("/groups/:groupId/codes/:codeId", func(c *fiber.Ctx) error {
 		sessionId := auth.SessionId(c)
 		if sessionId == "" {
@@ -712,8 +757,8 @@ func extractOtpAuthUrl(raw string) (*OtpConfig, error) {
 		if err != nil || num < 0 {
 			return nil, fmt.Errorf("invalid period")
 		}
-		unsigned_num := uint(num)
-		out.Period = &unsigned_num
+		unsignedNum := uint(num)
+		out.Period = &unsignedNum
 	}
 
 	return &out, nil

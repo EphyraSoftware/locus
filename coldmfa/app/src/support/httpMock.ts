@@ -171,6 +171,39 @@ const handlers = [
     }
   ),
 
+  http.post(
+    'http://127.0.0.1:3000/coldmfa/api/groups/:groupId/codes/:codeId/move',
+    async ({ request, params }) => {
+      if (nextIsHttpErr) {
+        nextIsHttpErr = false
+        return HttpResponse.json({ error: 'A test error' }, { status: 500 })
+      }
+
+      const groupId = params['groupId'] as string
+      const codeId = params['codeId'] as string
+
+      const req = (await request.json()) as Record<string, string>
+      const toGroupId = req['toGroupId']
+
+      if (!data[groupId] || !data[toGroupId]) {
+        return HttpResponse.json({ error: 'Group not found' }, { status: 404 })
+      }
+
+      if (!data[groupId].codes) {
+        data[groupId].codes = []
+      }
+
+      if (!data[toGroupId].codes) {
+        data[toGroupId].codes = []
+      }
+
+      data[groupId].codes = data[groupId].codes!.filter((code) => code.codeId !== codeId)
+      data[toGroupId].codes!.push(data[groupId].codes!.find((code) => code.codeId === codeId)!)
+
+      return new HttpResponse(null, { status: 204 })
+    }
+  ),
+
   http.delete(
     'http://127.0.0.1:3000/coldmfa/api/groups/:groupId/codes/:codeId',
     async ({ params }) => {

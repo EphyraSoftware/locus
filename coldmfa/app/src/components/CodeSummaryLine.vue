@@ -18,10 +18,12 @@ defineEmits<{
 const client = inject<AxiosInstance>('client') as AxiosInstance
 const groupsStore = useGroupsStore()
 const fetchedCode = ref<PasscodeResponse | undefined>()
+const moveCodeModalOpen = ref(false)
 
 const codeName = useTemplateRef<HTMLParagraphElement>('codeName')
 
 const code = computed(() => groupsStore.codeById(props.groupId, props.codeId))
+const otherGroups = computed(() => groupsStore.groups.filter((g) => g.groupId !== props.groupId))
 
 const deleteCounter = ref(5)
 
@@ -110,6 +112,35 @@ const tryDelete = async () => {
     }
   }
 }
+
+const showMoveCode = () => {
+  moveCodeModalOpen.value = true
+}
+
+const moveCode = async (groupId: string) => {
+  if (!code.value || !groupId) {
+    return
+  }
+
+  try {
+    await client.post(
+      `api/groups/${props.groupId}/codes/${code.value.codeId}/move`,
+      {
+        toGroupId: groupId
+      },
+      {
+        validateStatus: (status) => status === 204
+      }
+    )
+
+    groupsStore.addCodeToGroup(groupId, code.value)
+    groupsStore.removeCodeFromGroup(props.groupId, code.value.codeId)
+  } catch (e) {
+    console.error(e)
+  }
+
+  moveCodeModalOpen.value = false
+}
 </script>
 
 <template>
@@ -155,6 +186,9 @@ const tryDelete = async () => {
         >
           Export
         </button>
+        <button class="btn btn-secondary join-item" data-test-id="move" @click="showMoveCode">
+          Move
+        </button>
         <button
           class="btn btn-primary join-item"
           @click="getCode"
@@ -174,6 +208,31 @@ const tryDelete = async () => {
       </div>
     </div>
   </div>
+
+  <dialog class="modal" :open="moveCodeModalOpen">
+    <div class="modal-box">
+      <h3 class="text-lg font-bold">Pick another group</h3>
+      <div class="ms-5 mt-3">
+        <ul class="list-disc">
+          <li
+            v-for="group in otherGroups"
+            :key="group.groupId"
+            class="cursor-pointer"
+            @click="moveCode(group.groupId)"
+          >
+            {{ group.name }}
+          </li>
+        </ul>
+      </div>
+
+      <div class="modal-action">
+        <form method="dialog">
+          <!-- if there is a button in a form, it will close the modal -->
+          <button class="btn">Cancel</button>
+        </form>
+      </div>
+    </div>
+  </dialog>
 </template>
 
 <style scoped></style>

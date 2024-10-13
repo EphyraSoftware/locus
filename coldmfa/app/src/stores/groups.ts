@@ -62,6 +62,16 @@ export const useGroupsStore = defineStore('groups', () => {
     return group && group.codes
   }
 
+  const removeCodeFromGroup = (groupId: string, codeId: string) => {
+    const group = groups.value.find((g) => g.groupId === groupId)
+    if (group && group.codes) {
+      const codeIndex = group.codes.findIndex((c) => c.codeId === codeId)
+      if (codeIndex !== -1) {
+        group.codes.splice(codeIndex, 1)
+      }
+    }
+  }
+
   return {
     groups,
     insertGroup,
@@ -71,7 +81,8 @@ export const useGroupsStore = defineStore('groups', () => {
     groupHasCodes,
     groupById,
     codeById,
-    groupCodes
+    groupCodes,
+    removeCodeFromGroup
   }
 })
 
