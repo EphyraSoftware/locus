@@ -245,6 +245,7 @@ describe('CodeSummaryLine', () => {
 
   it('move between groups', async () => {
     const wrapper = mount(Host, {
+      attachTo: document.body,
       props: {
         groupId,
         codeId

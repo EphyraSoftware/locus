@@ -115,7 +115,7 @@ describe('CreateCode', () => {
       }
     })
     await wrapper
-      .get('input')
+      .get('input[data-test-id="code-original"]')
       .setValue(
         'otpauth://totp/EphyraSoftware:test-a?algorithm=SHA1&digits=6&issuer=EphyraSoftware&period=30&secret=NL6ZHWZXRNCNNIHQKDXK2Q4GGA3PKQD3'
       )
@@ -126,5 +126,41 @@ describe('CreateCode', () => {
     await flushPromises()
 
     expect(wrapper.html()).toContain('Error creating your code: A test error')
+  })
+
+  it('create code manual', async () => {
+    const wrapper = mount(CreateCode, {
+      global: {
+        provide: {
+          client
+        }
+      },
+      props: {
+        groupId
+      }
+    })
+
+    // Switch to the manual tab
+    await wrapper.get('a[data-test-id="manual"]').trigger('click')
+
+    // Fill out the form, leaving defaults in place
+    await wrapper.get('input[data-test-id="code-provider"]').setValue('EphyraSoftware')
+
+    await wrapper.get('input[data-test-id="code-name"]').setValue('test-a')
+
+    await wrapper
+      .get('input[data-test-id="code-secret"]')
+      .setValue('NL6ZHWZXRNCNNIHQKDXK2Q4GGA3PKQD3')
+
+    // Submit the form to creat a code
+    await wrapper.get('button').trigger('submit')
+
+    await flushPromises()
+
+    // Check that the created code was put in the store
+    const groupsStore = useGroupsStore()
+    expect(groupsStore.groups).toHaveLength(1)
+    const codes = groupsStore.groupCodes(groupId)
+    expect(codes).toHaveLength(1)
   })
 })
