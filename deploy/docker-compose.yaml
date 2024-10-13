@@ -49,7 +49,7 @@ services:
     depends_on:
       - db
       - kratos
-    image: ghcr.io/ephyrasoftware/locus:v0.0.8
+    image: ghcr.io/ephyrasoftware/locus:v0.0.9
     ports:
       - '3000'
     environment:
